@@ -75,6 +75,11 @@ class GameState:
             "comms_damaged_known": False,
             "transmitter_repaired": False,
             "warning_sent": False,
+            # Sable, the synthetic who can spend itself to save you — once.
+            "sable_awake": False,
+            "sable_alive": False,
+            "sable_following": False,
+            "sable_sacrifice_used": False,
         }
 
         self.visited_rooms = set()
@@ -435,6 +440,37 @@ class GameState:
             m.tracked_room_id = m.current_room_id
         # else: keep the previous belief — a one-turn lie.
 
+    def _safe_adjacent(self, exclude):
+        """First non-toxic neighbour that isn't the given room (for an escape)."""
+        room = self.current_room
+        for direction in DIRECTION_ORDER:
+            dest = room.exits.get(direction)
+            if dest and dest != exclude and dest not in TOXIC_ROOMS:
+                return dest
+        return None
+
+    def _sable_saves(self):
+        """If Sable is following and hasn't been spent, it dies in your place.
+        Returns the rescue text, or None if Sable can't help."""
+        if not (self.get_flag("sable_following") and not self.get_flag("sable_sacrifice_used")):
+            return None
+        self.set_flag("sable_sacrifice_used", True)
+        self.set_flag("sable_following", False)
+        self.set_flag("sable_alive", False)
+        dest = self._safe_adjacent(self.monster.current_room_id)
+        if dest:
+            self.player.last_room_id = self.current_room_id
+            self.current_room_id = dest
+            self.player.stayed_turns_in_room = 0
+            self.player.hidden = False
+            self.player.hidden_spot = None
+        # The feeding buys you a few turns.
+        self.monster.set_distracted(self.turn_count + 3)
+        self.monster.state = "feeding"
+        return ("Sable pushes you through the hatch.\n\n"
+                "The shape drops onto it.\n\n"
+                "\"Go,\" Sable says. The hatch closes before the sound begins.")
+
     def _resolve_same_room(self):
         """The monster is in the player's room. Decide what happens."""
         m = self.monster
@@ -452,7 +488,9 @@ class GameState:
             return "It is here — but its attention is elsewhere. Not yet."
 
         if not self.player.hidden:
-            m.turns_since_seen = 0
+            saved = self._sable_saves()
+            if saved:
+                return saved
             self.death_state = "monster"
             return None  # death message printed by the main loop
 
@@ -470,6 +508,9 @@ class GameState:
         chance = max(5, min(chance, 95))
         roll = self.rng.randint(1, 100)
         if roll <= chance:
+            saved = self._sable_saves()
+            if saved:
+                return saved
             self.death_state = "monster"
             return None
         # A worn-out spot earns a colder near-miss: it has learned your habit.

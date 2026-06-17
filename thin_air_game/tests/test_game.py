@@ -167,6 +167,36 @@ def test_monster_boards_after_cave_return(game):
 # --------------------------------------------------------------------------- #
 # Win gate
 # --------------------------------------------------------------------------- #
+def test_sable_wakes_and_follows(game):
+    gs, parser = game
+    gs.current_room_id = "crew_quarters"
+    out = parser.parse_command("examine sable")
+    assert gs.get_flag("sable_following") is True
+    assert "sable" in out.lower()
+
+
+def test_sable_sacrifice_prevents_one_death(game):
+    gs, _ = game
+    gs.monster.active = True
+    gs.monster.phase = "aboard"
+    gs.current_room_id = "central_corridor"
+    gs.monster.current_room_id = "central_corridor"
+    gs.set_flag("sable_following", True)
+    gs.set_flag("sable_alive", True)
+
+    msg = gs._resolve_same_room()           # would be a kill
+    assert gs.death_state is None           # Sable takes it instead
+    assert gs.get_flag("sable_sacrifice_used") is True
+    assert gs.current_room_id != "central_corridor"  # pushed to safety
+
+    # Second time — once its feeding ends — there is no one left to save you.
+    gs.turn_count = 99  # past the feeding distraction window
+    gs.monster.current_room_id = gs.current_room_id
+    gs.player.hidden = False
+    gs._resolve_same_room()
+    assert gs.death_state == "monster"
+
+
 def test_final_repair_camps_communications(game):
     gs, _ = game
     gs.monster.active = True

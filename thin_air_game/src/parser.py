@@ -110,6 +110,8 @@ class Parser:
             "run": lambda: self.handle_run(args),
             "wait": lambda: self.handle_wait(),
             "listen": lambda: self.handle_listen(),
+            "talk": lambda: self.handle_sable(),
+            "wake": lambda: self.handle_sable(),
             "open": lambda: self.handle_open(args),
             "yell": lambda: self.handle_yell(),
             "shout": lambda: self.handle_yell(),
@@ -190,6 +192,8 @@ class Parser:
         if not words:
             return "Examine what?"
         name = " ".join(words)
+        if "sable" in name:
+            return self.handle_sable()
         self._act(1)
         for item in self.game_state.current_room.items:
             if item.matches_name(name):
@@ -247,6 +251,26 @@ class Parser:
             "A drip, somewhere. The recyclers. Probably the recyclers.",
             "Nothing. The good kind, for now.",
         ])
+
+    def handle_sable(self) -> str:
+        gs = self.game_state
+        if gs.get_flag("sable_sacrifice_used") and not gs.get_flag("sable_alive"):
+            self._meta()
+            return "Sable is gone. The hatch it closed stays closed."
+        if gs.get_flag("sable_following"):
+            self._meta()
+            return 'Sable keeps pace at your shoulder. "Keep moving," it says.'
+        if gs.current_room_id != "crew_quarters":
+            self._meta()
+            return "There is no one here by that name."
+        # Wake it: one sparse hint, then it falls in behind you.
+        gs.set_flag("sable_awake", True)
+        gs.set_flag("sable_alive", True)
+        gs.set_flag("sable_following", True)
+        self._act(1)
+        return ('The synthetic\'s eyes find you. "Sable," it says. "I was crew."\n'
+                '"It learns doors. It learns you. Stay quiet, and keep moving."\n'
+                "Sable rises and falls into step behind you.")
 
     # ------------------------------------------------------------------ #
     # Inventory / items

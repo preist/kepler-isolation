@@ -71,7 +71,9 @@ def create_rooms():
     )
     rooms["crew_quarters"] = Room(
         name="Crew Quarters",
-        description="Bunks and personal lockers. A faint smell of old coffee.",
+        description="Bunks and personal lockers. A faint smell of old coffee.\n"
+                    "A synthetic sits powered-down against the lockers. Its name "
+                    "plate reads SABLE.",
         items=[Item("access card", "card,id", "A corporate access card.", portable=True)],
         exits={"west": "med_bay", "south": "galley"},
         hidden_items=[],
