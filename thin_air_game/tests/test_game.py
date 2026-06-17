@@ -234,6 +234,34 @@ def test_repair_requires_all_parts(game):
     assert "missing" in out.lower()
 
 
+def test_save_load_roundtrip(game, tmp_path):
+    import save
+    gs, parser = game
+    parser.parse_command("take hand terminal")
+    parser.parse_command("south")
+    gs.monster.active = True
+    gs.monster.phase = "aboard"
+    gs.monster.current_room_id = "reactor_room"
+    gs.monster.suspicion_by_room = {"galley": 5}
+    gs.set_flag("cave_triggered", True)
+
+    path = str(tmp_path / "s.json")
+    assert save.save_game(gs, path)
+
+    # Trash live state, then restore.
+    gs.current_room_id = "cockpit"
+    gs.player.inventory = []
+    gs.monster.current_room_id = "cockpit"
+    assert save.load_game(gs, path)
+
+    assert gs.current_room_id == "central_corridor"
+    assert gs.player.has_terminal is True
+    assert any(i.name == "hand terminal" for i in gs.player.inventory)
+    assert gs.monster.current_room_id == "reactor_room"
+    assert gs.monster.suspicion_by_room == {"galley": 5}
+    assert gs.get_flag("cave_triggered") is True
+
+
 def test_full_repair_and_send_wins(game):
     gs, parser = game
     gs.current_room_id = "communications"

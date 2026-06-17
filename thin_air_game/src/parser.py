@@ -116,6 +116,8 @@ class Parser:
             "yell": lambda: self.handle_yell(),
             "shout": lambda: self.handle_yell(),
             "map": lambda: self.handle_map(),
+            "save": lambda: self.handle_save(),
+            "load": lambda: self.handle_load(),
             "help": lambda: self.handle_help(),
             "quit": lambda: self.handle_quit(),
             "restart": lambda: self.handle_restart(),
@@ -581,6 +583,18 @@ class Parser:
     # ------------------------------------------------------------------ #
     # Meta
     # ------------------------------------------------------------------ #
+    def handle_save(self) -> str:
+        self._meta()
+        import save
+        return "Saved." if save.save_game(self.game_state) else "Could not write the save."
+
+    def handle_load(self) -> str:
+        self._meta()
+        import save
+        if save.load_game(self.game_state):
+            return "Loaded. You are back in the " + self.game_state.current_room.name + "."
+        return "No save found."
+
     def handle_map(self) -> str:
         self._meta()
         visited = [r.name for r in self.game_state.rooms.values() if r.visited]
@@ -597,7 +611,7 @@ class Parser:
             "  inventory (i), wear <thing>, remove <thing>, use <thing>, read <thing>\n"
             "  scan, listen, hide [spot], crawl <dir>, run <dir>, throw <thing> [dir]\n"
             "  install <part>, repair transmitter, send <message>\n"
-            "  wait, map, help, quit, restart"
+            "  wait, map, save, load, help, quit, restart"
         )
 
     def handle_quit(self) -> str:
