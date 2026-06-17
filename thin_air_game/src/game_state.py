@@ -26,7 +26,8 @@ SOUND_LABELS = {0: "silent", 1: "quiet", 2: "audible", 3: "loud", 4: "violent"}
 # Rooms whose atmosphere is lethal without a suit.
 TOXIC_ROOMS = {"surface", "landing_gear", "ridge", "cave_mouth", "signal_cave", "black_pool"}
 
-# Sparse telegraph lines used when the monster is close.
+# Sparse telegraph lines. We never print the monster's state as a word — we let
+# these stand in for it. Hunting reads fast and certain; searching reads soft.
 NEAR_SIGNS = [
     "Something taps once in the vent.",
     "A handprint appears high on the wall. Too many fingers.",
@@ -34,6 +35,12 @@ NEAR_SIGNS = [
     "Somewhere close, metal flexes and settles.",
     "A wet sound, then nothing.",
     "The lights stutter, then hold.",
+]
+HUNT_SIGNS = [
+    "Footfalls. Fast, then nothing. It knows where you were.",
+    "A hatch slams shut two rooms over.",
+    "The lights drop to red and stay there.",
+    "Metal shrieks, closing the distance.",
 ]
 
 
@@ -419,8 +426,15 @@ class GameState:
         if m.current_room_id == self.current_room_id:
             return None
         dist, _ = self.shortest_path(self.current_room_id, m.current_room_id)
-        if dist is not None and dist <= 2 and self.rng.random() < 0.6:
-            return self.rng.choice(NEAR_SIGNS)
+        if dist is None or dist > 2:
+            return None
+        # Hunting telegraphs harder and more often than a blind search.
+        if m.state == "hunting":
+            pool, threshold = HUNT_SIGNS, 0.7
+        else:
+            pool, threshold = NEAR_SIGNS, 0.55
+        if self.rng.random() < threshold:
+            return self.rng.choice(pool)
         return None
 
     def _update_scanner(self):
