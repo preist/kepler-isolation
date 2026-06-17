@@ -126,7 +126,9 @@ class GameState:
         `start`."""
         if start == goal:
             return 0, None
-        # BFS; record the first direction taken from start.
+        # Standard BFS, but each frontier node carries the *first* direction we
+        # took out of `start` — that's what the scanner reports ("MOTION: west").
+        # Seeding neighbours in DIRECTION_ORDER makes ties deterministic.
         queue = deque()
         seen = {start}
         for direction, dest in self._neighbors(start, use_vents):
@@ -173,6 +175,9 @@ class GameState:
     def advance_world(self):
         """Run one full turn of simulation after a time-advancing command.
         Returns a list of message lines to display."""
+        # The order below is deliberate: toxic air can kill before the monster
+        # ever moves, and boarding must resolve before we simulate an aboard
+        # monster on the same turn it arrives.
         msgs = []
         self.turn_count += 1
         self.sound_level = SOUND_LABELS.get(self.last_action_sound, "silent")
@@ -239,6 +244,9 @@ class GameState:
 
         # Failsafe: if the player lingers on the ship a long time after the cave
         # trigger without the airlock event, the thing finds another way in.
+        # Failsafe so the game can't stall: if the player triggers the cave but
+        # somehow never returns through the airlock, the thing finds another way
+        # in eventually. (In practice the airlock event above pre-empts this.)
         if (self.get_flag("cave_triggered")
                 and not self.get_flag("monster_boarded")
                 and self.board_countdown is None
@@ -312,8 +320,10 @@ class GameState:
             m.aggression = max(m.aggression, 1)
 
     def _choose_target(self):
+        # Target priority, highest first: a fresh loud sound beats accumulated
+        # suspicion, which beats a blind drift toward the player. The drift is
+        # intentionally partial (see below) so the player gets breathing room.
         m = self.monster
-        # Recent loud/violent sound dominates.
         if m.last_heard_room_id and m.turns_since_heard <= 2:
             m.state = "hunting"
             return m.last_heard_room_id
@@ -321,7 +331,6 @@ class GameState:
         if hi:
             m.state = "investigating"
             return hi
-        # No evidence: drift toward the player, but not relentlessly.
         m.state = "searching"
         if m.aggression >= 2 or self.rng.random() < 0.5:
             return self.current_room_id
@@ -343,12 +352,13 @@ class GameState:
                     m.current_room_id = self.rng.choice(neighbors)
             return
 
+        # Speed scales with aggression: frantic late-game (two steps), but slow
+        # and distant early (every other turn) so first contact feels fair.
         dist_to_player, _ = self.shortest_path(m.current_room_id, self.current_room_id)
         steps = 1
         if m.aggression >= 3:
             steps = 2
         elif m.aggression <= 1 and (dist_to_player or 0) > 4:
-            # Calm and distant: move every other turn.
             if m.movement_cooldown > 0:
                 m.movement_cooldown -= 1
                 return
@@ -403,7 +413,10 @@ class GameState:
             self.death_state = "monster"
             return None  # death message printed by the main loop
 
-        # Player is hidden: roll detection.
+        # Player is hidden: roll detection. Each term is a knob the player can
+        # actually feel — noise this turn, how long the monster has been circling
+        # (searching_streak), and how worn-out this hiding spot is — offset by the
+        # spot's quality. Never 0% or 100%: stillness is never perfect safety.
         m.searching_streak += 1
         spot = self.player.hidden_spot or {"quality": 0, "reuse": 0}
         chance = 10

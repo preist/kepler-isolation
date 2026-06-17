@@ -60,6 +60,9 @@ class Parser:
 
         words = command.split()
 
+        # Normalization happens in layers so the parser stays forgiving:
+        # drop a leading "go", expand single-word aliases, rewrite multiword
+        # verb phrases ("put on" -> wear), then strip filler from the object.
         # Standalone direction or "go <dir>".
         if words[0] == "go" and len(words) > 1:
             words = words[1:]
