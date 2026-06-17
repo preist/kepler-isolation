@@ -41,6 +41,15 @@ class ThinAirGame:
         fast_flag = "--fast" in sys.argv or os.environ.get("THIN_AIR_FAST")
         self.interactive = sys.stdin.isatty() and sys.stdout.isatty()
         self.paced = self.interactive and not fast_flag
+        # Color is on for a real terminal by default; --color forces it,
+        # --no-color / NO_COLOR turn it off. Restrained palette only.
+        self.color = "--color" in sys.argv or (
+            sys.stdout.isatty()
+            and "--no-color" not in sys.argv
+            and not os.environ.get("NO_COLOR"))
+
+    def c(self, text: str, code: str) -> str:
+        return f"\033[{code}m{text}\033[0m" if self.color else text
 
     # ------------------------------------------------------------------ #
     # Output helpers
@@ -136,13 +145,27 @@ class ThinAirGame:
     def status_line(self):
         room = self.gs.current_room
         suit = "worn" if self.gs.player.suit_worn else "none"
-        parts = [f"Location: {room.name}",
-                 f"Sound: {self.gs.sound_level}",
-                 f"Suit: {suit}"]
+
+        sound = self.gs.sound_level
+        sound_code = {"audible": "33", "loud": "31", "violent": "1;31"}.get(sound, "2")
+        suit_code = "31" if (suit == "none" and room.toxic) else "2"
+
+        parts = [f"{self.c('Location:', '2')} {room.name}",
+                 f"{self.c('Sound:', '2')} {self.c(sound, sound_code)}",
+                 f"{self.c('Suit:', '2')} {self.c(suit, suit_code)}"]
+
         motion = self.motion_summary()
         if motion is not None:
-            parts.append(f"Motion: {motion}")
-        return " | ".join(parts)
+            if motion in ("SEEN", "HERE"):
+                code = "1;31"
+            elif motion in ("interference", "lost", "outside", "none"):
+                code = "2"
+            elif motion[-1:].isdigit() and int(motion.split()[-1]) <= 2:
+                code = "31"
+            else:
+                code = "33"
+            parts.append(f"{self.c('Motion:', '2')} {self.c(motion, code)}")
+        return self.c(" | ", "2").join(parts)
 
     def render_room(self):
         room = self.gs.current_room
@@ -151,9 +174,9 @@ class ThinAirGame:
         print()
         print(self.wrap(room.describe(self.gs)))
         print()
-        print("Exits: " + (", ".join(room.exits.keys()) if room.exits else "none"))
+        print(self.c("Exits:", "2") + " " + (", ".join(room.exits.keys()) if room.exits else "none"))
         if room.items:
-            print("Items: " + ", ".join(i.name for i in room.items))
+            print(self.c("Items:", "2") + " " + ", ".join(i.name for i in room.items))
         self.last_room_id = self.gs.current_room_id
 
     # ------------------------------------------------------------------ #
@@ -211,19 +234,19 @@ class ThinAirGame:
         print(RULE)
         if self.gs.death_state == "monster":
             text = DEATH_TEXT["monster"].get(self.gs.player.type, DEATH_TEXT["monster"]["human"])
-            self.say(text, slow=True)
+            self.say(self.c(text, "31"), slow=True)
         elif self.gs.death_state == "toxic":
             pass  # already printed by the simulation
         print(RULE)
-        print("\nYou died.")
+        print(self.c("\nYou died.", "1;31"))
 
     def show_ending(self):
         self.beat()
         print()
         print(RULE)
-        self.say("TRANSMISSION SENT.", slow=True)
+        self.say(self.c("TRANSMISSION SENT.", "1;36"), slow=True)
         print()
-        self.say("> DO NOT COME HERE.", slow=True)
+        self.say(self.c("> DO NOT COME HERE.", "1;36"), slow=True)
         print()
         print("FARLAND-GUTTENBER RELAY STATION")
         print("SEVENTEEN DAYS LATER")
