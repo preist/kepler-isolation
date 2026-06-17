@@ -425,6 +425,9 @@ class Parser:
         spot["reuse"] += 1
         self.player.hidden = True
         self.player.hidden_spot = spot
+        # If it's aboard, it files away where you went to ground.
+        if self.game_state.monster.active:
+            self.game_state.monster.known_hide_room = self.game_state.current_room_id
         self._act(1)
         if reused:
             return f"You take cover again — {spot['name']}.\nThe same hiding place feels smaller now."
@@ -444,22 +447,29 @@ class Parser:
             self._meta()
             return f"You don't have {name} to throw."
         self.player.remove_from_inventory(item)
-        m = self.game_state.monster
-        if direction and direction in self.game_state.current_room.exits:
-            target = self.game_state.current_room.exits[direction]
-            if m.active:
+        gs = self.game_state
+        m = gs.monster
+        if direction and direction in gs.current_room.exits:
+            target = gs.current_room.exits[direction]
+            # The decoy makes noise over there, not here.
+            self._act(0)
+            gs.last_action_sound = 0
+            if not m.active:
+                return f"The {item.name} clatters away to the {direction}."
+            # It learns. Each trick is less likely to work than the last.
+            fell_for_it = gs.rng.random() < max(0.1, 1.0 - 0.3 * m.distraction_uses)
+            m.distraction_uses += 1
+            if fell_for_it:
                 m.last_heard_room_id = target
                 m.turns_since_heard = 0
                 m.add_suspicion(target, 8)
-                m.set_distracted(self.game_state.turn_count + 2)
-            # Noise is over there, not here.
-            self.game_state.current_room.items  # noop
-            self._act(0)
-            self.game_state.last_action_sound = 0
-            return f"The {item.name} clatters away to the {direction}. Something shifts toward the sound."
-        # No direction: just noise where you are.
+                m.set_distracted(gs.turn_count + 2)
+                return f"The {item.name} clatters away {direction}. Something shifts toward the sound."
+            return (f"The {item.name} clatters away {direction}.\n"
+                    "It glances toward the noise. It does not turn.")
+        # No direction: just noise where you are. Loud, and a mistake.
         self._act(3)
-        return f"The {item.name} clatters across the floor. Loud."
+        return f"The {item.name} clatters across the floor. Loud. Too loud."
 
     # ------------------------------------------------------------------ #
     # Repair / win

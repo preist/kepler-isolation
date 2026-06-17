@@ -8,6 +8,7 @@ boarding event, and the win gate.
 from collections import deque
 
 from conftest import build_game
+from item import Item
 
 
 # --------------------------------------------------------------------------- #
@@ -161,6 +162,26 @@ def test_monster_boards_after_cave_return(game):
             break
     assert gs.get_flag("monster_boarded") is True
     assert gs.monster.active is True
+
+
+# --------------------------------------------------------------------------- #
+# Win gate
+# --------------------------------------------------------------------------- #
+def test_distraction_fatigue(game):
+    gs, parser = game
+    gs.monster.active = True
+    gs.monster.phase = "aboard"
+    gs.monster.current_room_id = "med_bay"
+    gs.current_room_id = "central_corridor"
+    # Spam decoys; the monster's gullibility must decay to the floor.
+    ignored = 0
+    for _ in range(8):
+        gs.player.inventory.append(Item("loose can", "can", "x", portable=True))
+        out = parser.parse_command("throw can north")
+        if "does not turn" in out:
+            ignored += 1
+    assert gs.monster.distraction_uses == 8
+    assert ignored >= 1  # it wises up
 
 
 # --------------------------------------------------------------------------- #

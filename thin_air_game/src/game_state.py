@@ -336,6 +336,9 @@ class GameState:
             m.state = "investigating"
             return hi
         m.state = "searching"
+        # It checks the spot it's caught you using before wandering elsewhere.
+        if m.known_hide_room and m.known_hide_room in self.rooms and self.rng.random() < 0.5:
+            return m.known_hide_room
         if m.aggression >= 2 or self.rng.random() < 0.5:
             return self.current_room_id
         return None
@@ -453,4 +456,8 @@ class GameState:
         if roll <= chance:
             self.death_state = "monster"
             return None
+        # A worn-out spot earns a colder near-miss: it has learned your habit.
+        if spot.get("reuse", 0) >= 2:
+            return (f"It goes straight to the {spot['name']}. It is learning your habits.\n"
+                    "Its attention passes over you. This time.")
         return "It is in the room with you.\nIt checks the wrong place. Slowly. Then moves on."
