@@ -269,8 +269,8 @@ class Parser:
         gs.set_flag("sable_alive", True)
         gs.set_flag("sable_following", True)
         self._act(1)
-        return ('The synthetic\'s eyes find you. "Sable," it says. "I was crew."\n'
-                '"It learns doors. It learns you. Stay quiet, and keep moving."\n'
+        return ('The synthetic\'s eyes find you. "Sable. I came down with the last crew."\n'
+                '"I watched it learn the doors. Then the names. Stay quiet. Keep moving."\n'
                 "Sable rises and falls into step behind you.")
 
     # ------------------------------------------------------------------ #

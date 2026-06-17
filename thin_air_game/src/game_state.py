@@ -38,6 +38,8 @@ NEAR_SIGNS = [
     "The air goes warm and close, the way breath does.",
     "Something is breathing in time with you. You stop. It does not.",
     "A smell finds you first. Old water. Something underneath it.",
+    "Three soft tones drift from the vent. The beacon's call. In here, now.",
+    "It tries your name. Almost gets it right, in a voice the ship doesn't have.",
 ]
 HUNT_SIGNS = [
     "Footfalls. Fast, then nothing. It knows where you were.",
@@ -244,12 +246,12 @@ class GameState:
             if n >= tol:
                 self.death_state = "toxic"
                 if self.player.type == "synthetic":
-                    return "Corrosion reaches something vital.\nYour systems go dark."
-                return "You make it a few more steps.\nThat is all."
+                    return "Corrosion finds something vital. Your optics white out.\nA last entry, unsent."
+                return "You make it a few more steps.\nThe planet does not even pause to watch."
             # Warning(s) before death
             if self.player.type == "synthetic":
-                return "WARNING: corrosive atmosphere. System integrity falling."
-            return "The air burns. Your eyes fill. You cannot breathe out here."
+                return "WARNING: corrosive atmosphere. Integrity falling.\nThis is survivable. Briefly."
+            return "The air burns. Your eyes flood. There is no breathing this.\nGet sealed, or get inside."
         else:
             # Safe: reset exposure.
             self.player.outside_exposure_turns = 0
@@ -299,8 +301,9 @@ class GameState:
                 # chase: you move away from it toward the parts, not into it.
                 spawn = "airlock" if self.get_flag("returned_after_cave") else self._distant_spawn()
                 self.board_monster(spawn)
-                msgs.append("Far down the ship, something knocks. Once. Soft.\n\n"
-                            "Then the sound is on your side of the hull.")
+                msgs.append("Far down the ship, something knocks. Once. Soft.\n"
+                            "Then three soft tones — the beacon's call, answered from inside.\n\n"
+                            "It came in with you.")
         # Count turns since "seen" grows while dormant (used by failsafe).
         if not self.get_flag("monster_boarded"):
             self.monster.turns_since_seen += 1
@@ -503,9 +506,10 @@ class GameState:
         # The feeding buys you a few turns.
         self.monster.set_distracted(self.turn_count + 3)
         self.monster.state = "feeding"
-        return ("Sable pushes you through the hatch.\n\n"
-                "The shape drops onto it.\n\n"
-                "\"Go,\" Sable says. The hatch closes before the sound begins.")
+        return ("Sable moves before you can — it has done this before.\n"
+                "It sets itself between you and the dark.\n\n"
+                "\"The order says save the specimen,\" it says. \"The order is wrong. Go.\"\n\n"
+                "The hatch closes before the sound begins.")
 
     def _resolve_same_room(self):
         """The monster is in the player's room. Decide what happens."""

@@ -23,9 +23,12 @@ WIDTH = 74
 DEATH_TEXT = {
     "toxic": "",  # message already printed by the simulation
     "monster": {
-        "human": "The room becomes very small.\nThen it is over.",
-        "synthetic": "It finds you. There is no fear to feel.\nOnly the end of input.",
-        "contract_specialist": "The handbook did not cover this.\nNothing does, now.",
+        "human": "The room becomes very small.\n"
+                 "You think of the face you meant to get back to. Then nothing.",
+        "synthetic": "It finds you. There is no fear — only the order, satisfied at last,\n"
+                     "and a final entry no one will read.",
+        "contract_specialist": "No clause covers this. You almost laugh.\n"
+                               "The contract was always going to be honoured this way.",
     },
 }
 
@@ -92,7 +95,8 @@ class ThinAirGame:
         print()
         print("K E P L E R   I S O L A T I O N")
         print(RULE)
-        print("Survey lander LANTERN-9. Contract: Halloway-Tanaka Industries.")
+        print("Survey lander LANTERN-9, grounded on LV-1187. They called it Kepler's Rest.")
+        print("Contract holder: Halloway-Tanaka Industries.")
         print()
         print("You wake on the ground. You do not remember the landing.")
         print()
@@ -102,28 +106,37 @@ class ThinAirGame:
         print("  Crew status: one.")
         print("  Crew status (revised): one.")
         print()
-        print("The signal is old. It has not degraded. That should not be possible.")
+        print("A signal is coming up through the rock. It is old. It has not degraded,")
+        print("and that should not be possible. The contract calls it a rescue.")
+        print("The contract calls you recoverable.")
         print(RULE)
         print()
 
     # Fixed personnel — one face per role. (All male, per the manifest.)
     ROLES = {
         "1": ("Elias Cole", "human"),
-        "2": ("Jonah Crane", "synthetic"),
+        "2": ("Jonah", "synthetic"),
         "3": ("Rourke Dunmore", "contract_specialist"),
+    }
+    ROLE_FLAVOR = {
+        "human": "You signed for the hazard pay. There is a face you mean to get back to.",
+        "synthetic": "The company's standing order sits in you, quiet. You decide, once\nmore, to ignore it.",
+        "contract_specialist": "You have read enough Halloway-Tanaka paper to know exactly what\n'recoverable' means.",
     }
 
     def create_character(self):
         print("HALLOWAY-TANAKA PERSONNEL — assign role:")
         print("  1. Crew        — Elias Cole")
-        print("  2. Synthetic   — Jonah Crane")
+        print("  2. Synthetic   — Jonah")
         print("  3. Contractor  — Rourke Dunmore")
         choice = input("> ").strip()
         name, ptype = self.ROLES.get(choice, self.ROLES["1"])
         self.gs.player = Player(name, "male", ptype)
         label = ptype.replace("_", " ").title()
-        print(f"\n{name}. {label}. The manifest lists him, and no one else.")
-        print("Type 'help' at any time.\n")
+        print(f"\n{name}. {label}.")
+        print(self.ROLE_FLAVOR[ptype])
+        print("The manifest lists him, and no one else.")
+        print("\nType 'help' at any time.\n")
 
     def setup_world(self):
         self.gs.rooms = create_rooms()
@@ -271,17 +284,19 @@ class ThinAirGame:
         print()
         for line in ('  "Play it again."',
                      '  "Do not come here."',
-                     '  "Was there contact?"',
-                     '  "Yes."',
-                     '  "Hostile?"',
-                     '  "Intelligent."'):
+                     '  "We have this voice on file. Older transmission. Same rock."',
+                     '  "Then it confirms the site is viable for the asset."',
+                     '  "Survivors?"',
+                     '  "The crew is a rounding error. We want what they found."',
+                     '  "Is it intelligent?"',
+                     '  "It learned our beacon and aimed it back at us. Yes."'):
             self.say(line, slow=True)
         print()
-        print("  A pause.")
+        print("  A pause. Someone pours coffee.")
         print()
-        self.say('  "Wake Survey Team One."', slow=True)
+        self.say('  "Wake the recovery team. Quietly."', slow=True)
         print()
-        self.say("LV-417c is upgraded to priority recovery.", slow=True)
+        self.say("LV-1187 is reclassified: priority acquisition.", slow=True)
         print()
         self.say(self.c("They are not warned.", "1;36"), slow=True)
         self.say(self.c("They are invited.", "1;36"), slow=True)

@@ -36,6 +36,39 @@ HIDING_SPOTS = {
 
 TOXIC_ROOMS = {"surface", "landing_gear", "ridge", "cave_mouth", "signal_cave", "black_pool"}
 
+# --- Narrative readables (the story is assembled from fragments, never told) ---
+
+MEMO_TEXT = (
+    "HALLOWAY-TANAKA INDUSTRIES — INTERNAL. Re: LV-1187, vessel LANTERN-9.\n"
+    "Objective: recover the biological specimen intact.\n"
+    "Assets are recoverable. Crews perform best uninformed.\n"
+    "Welcome aboard. Build something that lasts."
+)
+
+RECORDER_TEXT = (
+    "\"—don't transmit. Whatever you do, don't answer it.\"\n"
+    "A long pause. Then, quieter:\n"
+    "\"It learned the beacon. It's using the beacon now.\"\n"
+    "\"I can't hear it anymore. It's in the walls.\""
+)
+
+BEACON_TEXT = (
+    "DO NOT— (static) —is not a distress call.\n"
+    "We sent it to warn you. They turned it around.\n"
+    "It is bait now. We are the proof. DO NOT—"
+)
+
+FRAGMENT_TEXT = (
+    "A scorched transmitter shard, still warm to read:\n"
+    "\"...to anyone who is not the company: turn the ship around.\n"
+    "The signal is the—\" (the rest is melted slag)"
+)
+
+HELMET_TEXT = (
+    "Scratched inside the shell, in a shaking hand:\n"
+    "MERCER WAS HERE. MERCER IS STILL HERE."
+)
+
 
 def create_rooms():
     """Create all 22 rooms with their properties and exits."""
@@ -44,122 +77,138 @@ def create_rooms():
     # --- Ship ---
     rooms["cockpit"] = Room(
         name="Cockpit",
-        description="Dead stars in the glass. The console waits with one green light.\n"
-                    "Your descent-sleep pod is still warm. You don't recall closing it.",
-        items=[Item("hand terminal", "terminal,scanner", "A rugged motion scanner. It reads direction and distance.", portable=True)],
+        description="Dead stars in the glass. The console holds one green light, patient.\n"
+                    "Your descent pod is still warm. You don't remember climbing out.",
+        items=[
+            Item("hand terminal", "terminal,scanner", "A rugged hand scanner. It reads motion — direction and distance. Company-issue.", portable=True),
+            Item("company memo", "memo,letter,paper", "A Halloway-Tanaka directive, printed on real paper. Someone wanted it deniable.", portable=True, readable_text=MEMO_TEXT),
+        ],
         exits={"south": "central_corridor"},
         hidden_items=[],
     )
     rooms["central_corridor"] = Room(
         name="Central Corridor",
-        description="Low ceiling. Handrails. Old boot marks. The lights hum in pairs.",
+        description="Low ceiling. Handrails worn smooth by hands that aren't aboard.\n"
+                    "The lights hum in pairs. A safety label has been taped over.",
         items=[],
         exits={"north": "cockpit", "east": "airlock", "south": "med_bay", "west": "engineering_access"},
         hidden_items=[],
     )
     rooms["airlock"] = Room(
         name="Airlock",
-        description="A narrow chamber. Suit locker, outer hatch, inner hatch.\nA red card reads: TWO MOVES WITHOUT SEAL.",
-        items=[Item("EVA suit", "suit,eva", "A full EVA suit. Helmet, gloves, hard seals.", portable=True, wearable=True)],
+        description="A narrow chamber. Suit locker, inner hatch, outer hatch.\n"
+                    "A red placard: TWO MOVES WITHOUT SEAL. Someone underlined TWO.",
+        items=[Item("EVA suit", "suit,eva", "A hard-shell EVA suit. Helmet, gloves, seals. It smells faintly of someone else.", portable=True, wearable=True)],
         exits={"west": "central_corridor", "out": "surface"},
         hidden_items=[],
     )
     rooms["med_bay"] = Room(
         name="Med Bay",
-        description="Medical supplies behind glass. A recorder log sits on the table.",
+        description="Supplies behind glass. A recorder log waits on the table, already cued.\n"
+                    "The cot has restraint straps. They buckle on the outside.",
         items=[
-            Item("medkit", "medic,kit", "A small medical kit.", portable=True),
-            Item("recorder log", "log,note,recording", "A crew recording.", portable=True,
-                 readable_text="\"I can't hear it anymore.\nIt's in the walls.\""),
+            Item("medkit", "medic,kit", "A field medical kit. Stims and sealant, and a card that reads USE SPARINGLY.", portable=True),
+            Item("recorder log", "log,note,recording", "A crew recording, cued to its final entry.", portable=True,
+                 readable_text=RECORDER_TEXT),
         ],
         exits={"north": "central_corridor", "east": "crew_quarters"},
         hidden_items=[],
     )
     rooms["crew_quarters"] = Room(
         name="Crew Quarters",
-        description="Bunks and personal lockers. A faint smell of old coffee.\n"
-                    "A synthetic sits powered-down against the lockers. Its name "
-                    "plate reads SABLE.",
-        items=[Item("access card", "card,id", "A corporate access card.", portable=True)],
+        description="Bunks and dented lockers. Old coffee, and under it, nothing at all.\n"
+                    "A synthetic sits powered-down against the wall. Its plate reads SABLE.",
+        items=[Item("access card", "card,id", "A Halloway-Tanaka access card. The photo has been scratched out.", portable=True)],
         exits={"west": "med_bay", "south": "galley"},
         hidden_items=[],
     )
     rooms["galley"] = Room(
         name="Galley",
-        description="A cramped kitchen. Loose cans scattered across the floor.",
-        items=[Item("loose can", "can", "An empty can. Light. Throwable.", portable=True, sound_on_use=3)],
+        description="A cramped galley. Cans rolled loose across the deck, never collected.\n"
+                    "A mug stands half-full. The coffee in it has skinned over.",
+        items=[Item("loose can", "can", "An empty ration can. Light enough to throw. Loud enough to matter.", portable=True, sound_on_use=3)],
         exits={"north": "crew_quarters", "west": "storage"},
         hidden_items=[],
     )
     rooms["storage"] = Room(
         name="Storage",
-        description="Boxes and crates. Maintenance tags curl off a shelf.",
+        description="Shelving and strapped crates. Maintenance tags curl in the dry air.\n"
+                    "A tally is scratched into one shelf, counting down. It ends at one.",
         items=[
-            Item("power coupler", "coupler", "A power coupling unit. Heavy.", portable=True, required_for_win=True),
-            Item("flare", "flares", "An emergency flare. Burns loud and bright.", portable=True, sound_on_use=3),
+            Item("power coupler", "coupler", "A power coupling unit. Heavy. Stamped with a hull number that isn't this hull.", portable=True, required_for_win=True),
+            Item("flare", "flares", "An emergency flare. It burns loud and bright, and tells everything exactly where you are.", portable=True, sound_on_use=3),
         ],
         exits={"east": "galley", "south": "cargo_bay", "west": "engineering_access"},
         hidden_items=[],
     )
     rooms["engineering_access"] = Room(
         name="Engineering Access",
-        description="A narrow passage. A panel hangs open over a crawlspace.",
-        items=[Item("repair kit", "kit,tools", "A basic repair kit.", portable=True)],
+        description="The throat of a passage. A panel hangs open over a black crawlspace.\n"
+                    "The crawlspace breathes a draft that smells of the world outside.",
+        items=[Item("repair kit", "kit,tools", "A repair kit. Someone already used half of it, in a hurry, badly.", portable=True)],
         exits={"east": "central_corridor", "south": "reactor_room", "west": "storage"},
         hidden_items=[],
     )
     rooms["reactor_room"] = Room(
         name="Reactor Room",
-        description="The reactor roars with heat. The noise drowns everything small.",
-        items=[Item("signal relay", "relay", "A signal transmission relay.", portable=True, required_for_win=True)],
+        description="The reactor roars with heat. The noise eats every smaller sound —\n"
+                    "yours, and not only yours.",
+        items=[Item("signal relay", "relay", "A signal relay. Company-grey. Built to make a small voice carry very far.", portable=True, required_for_win=True)],
         exits={"north": "engineering_access"},
         hidden_items=[],
     )
     rooms["cargo_bay"] = Room(
         name="Cargo Bay",
-        description="Tall crates and a dead forklift. The dark pools in the corners.",
-        items=[Item("antenna key", "key", "An antenna tuning key.", portable=True, required_for_win=True)],
+        description="Tall crates, a dead forklift, dark pooling in the corners like water.\n"
+                    "The wall manifest lists more cargo than was ever unloaded.",
+        items=[Item("antenna key", "key", "An antenna tuning key, worn to a shine by hands that needed it before you.", portable=True, required_for_win=True)],
         exits={"north": "storage", "east": "maintenance_junction", "south": "lower_hold"},
         hidden_items=[],
     )
     rooms["lower_hold"] = Room(
         name="Lower Hold",
-        description="A dead-end space. Scratch marks rake the walls, low down.",
-        items=[Item("beacon fragment", "fragment", "A shard of an old distress beacon.", portable=True)],
+        description="A dead-end. Scratch marks rake the walls, low down, as if dragged.\n"
+                    "The air is colder here, and it moves when nothing should move it.",
+        items=[Item("beacon fragment", "fragment", "A scorched shard of an older beacon.", portable=True, readable_text=FRAGMENT_TEXT)],
         exits={"north": "cargo_bay"},
         hidden_items=[],
     )
     rooms["maintenance_junction"] = Room(
         name="Maintenance Junction",
-        description="A junction of service tunnels. A tool rack, mostly empty.",
+        description="A junction of service tunnels. A tool rack of mostly bare hooks.\n"
+                    "Grease handprints climb one wall. One of them has too many fingers.",
         items=[],
         exits={"west": "cargo_bay", "east": "comms_hall", "north": "ventral_service"},
         hidden_items=[],
     )
     rooms["ventral_service"] = Room(
         name="Ventral Service",
-        description="A mechanical crawl. A fan turns somewhere, ragged.",
+        description="A mechanical crawl. A fan turns somewhere, ragged, like it is tired.\n"
+                    "The ducts here are wide enough for a person. Or for less than one.",
         items=[],
         exits={"south": "maintenance_junction", "east": "observation"},
         hidden_items=[],
     )
     rooms["observation"] = Room(
         name="Observation",
-        description="A long window. The planet presses its dark face against the glass.",
+        description="A long window. The planet leans its dark face against the glass.\n"
+                    "Your reflection looks thin out here, as if the dark is using it up.",
         items=[],
         exits={"west": "ventral_service", "south": "comms_hall"},
         hidden_items=[],
     )
     rooms["comms_hall"] = Room(
         name="Comms Hall",
-        description="The final approach. Equipment lines the walls. The air feels watched.",
+        description="The last stretch before Communications. Equipment lines the walls.\n"
+                    "The air has the quality of being held. Of being watched, and waited on.",
         items=[],
         exits={"north": "observation", "west": "maintenance_junction", "east": "communications"},
         hidden_items=[],
     )
     rooms["communications"] = Room(
         name="Communications",
-        description="A dead microphone. A damaged transmitter with three open sockets.",
+        description="A dead microphone. The transmitter gapes — three empty sockets.\n"
+                    "A chair faces it, turned as if someone left mid-sentence.",
         items=[],
         exits={"west": "comms_hall"},
         hidden_items=[],
@@ -168,44 +217,50 @@ def create_rooms():
     # --- Surface / cave ---
     rooms["surface"] = Room(
         name="Surface",
-        description="Black dust moves like smoke. Your light finds the ridge east.",
+        description="Black dust moves like slow smoke. Your suit light gropes east, to a ridge.\n"
+                    "Behind you the lander ticks as it cools. Then it stops ticking.",
         items=[],
         exits={"in": "airlock", "east": "ridge", "south": "landing_gear"},
         hidden_items=[],
     )
     rooms["landing_gear"] = Room(
         name="Landing Gear",
-        description="A bent strut. Later there will be slime here. Not yet.",
+        description="A bent strut, fused with an old impact. Tools half-buried in the dust.\n"
+                    "Nothing else out here. Not yet.",
         items=[],
         exits={"north": "surface"},
         hidden_items=[],
     )
     rooms["ridge"] = Room(
         name="Ridge",
-        description="A narrow spine of rock. The cave mouth gapes east.",
+        description="A narrow spine of rock. The cave mouth gapes east, exhaling cold.\n"
+                    "The signal is stronger here. It almost sounds like a voice you know.",
         items=[],
         exits={"west": "surface", "east": "cave_mouth"},
         hidden_items=[],
     )
     rooms["cave_mouth"] = Room(
         name="Cave Mouth",
-        description="The signal is louder here. Not stronger. Louder.",
+        description="The signal is louder here. Not stronger. Louder.\n"
+                    "The walls are slick. Your light won't find the bottom of the dark below.",
         items=[],
         exits={"west": "ridge", "down": "signal_cave"},
         hidden_items=[],
     )
     rooms["signal_cave"] = Room(
         name="Signal Cave",
-        description="Wet walls, strange markings. A beacon blinks in the dark.",
-        items=[Item("distress beacon", "beacon,signal", "A beacon, old but undegraded. That should not be possible.",
-                    portable=False, readable_text="DO NOT OPEN THE—")],
+        description="Wet walls, scored with marks that are neither tools nor claws.\n"
+                    "A beacon blinks in the dark, patient, repeating three soft tones.",
+        items=[Item("distress beacon", "beacon,signal", "An old beacon, undegraded. That should not be possible. It listens while it calls.",
+                    portable=False, readable_text=BEACON_TEXT)],
         exits={"up": "cave_mouth", "east": "black_pool"},
         hidden_items=[],
     )
     rooms["black_pool"] = Room(
         name="Black Pool",
-        description="A still pool of black liquid. Something folded lies at its edge, like wet paper.",
-        items=[Item("old helmet", "helmet", "A cracked helmet. Not from your crew.", portable=True)],
+        description="A still pool of black liquid that gives your light nothing back.\n"
+                    "At its edge, folded small and wet like paper, something waits to be warm.",
+        items=[Item("old helmet", "helmet", "A cracked EVA helmet. Not from your crew.", portable=True, readable_text=HELMET_TEXT)],
         exits={"west": "signal_cave"},
         hidden_items=[],
     )
@@ -227,42 +282,43 @@ def create_rooms():
         rooms[cave_id].scanner_interference = True
 
     # --- Dread pass: how each room reads once the creature is aboard ---
-    # The trick is repetition-with-variation: a familiar detail, changed.
+    # The trick is repetition-with-variation: a familiar detail, changed. The
+    # ship stops being a ship and starts being the inside of something.
     aboard = {
-        "cockpit": "Dead stars in the glass. The one green light still waits.\n"
-                   "Your own reflection sits in the chair behind you. You are standing.",
+        "cockpit": "Dead stars. The one green light still waits.\n"
+                   "Your reflection sits in the chair behind you. You are standing.",
         "central_corridor": "The lights hum in pairs. One pair has gone dark.\n"
                             "The old boot marks lead somewhere they didn't before.",
         "airlock": "Inner hatch, outer hatch. The outer seal is scored from the\n"
-                   "outside. The red card still reads: TWO MOVES WITHOUT SEAL.",
+                   "outside. The placard still reads: TWO MOVES WITHOUT SEAL.",
         "med_bay": "Supplies behind cracked glass. The recorder log lies untouched.\n"
-                   "The cabinet door hangs open. You did not open it.",
+                   "The cabinet hangs open. You did not open it. The straps are undone.",
         "crew_quarters": "Bunks and lockers. The smell of old coffee is gone.\n"
-                         "Something low and animal has taken its place.",
+                         "Something low and animal has moved in to replace it.",
         "galley": "The cans are scattered wider now. A few are flattened,\n"
-                  "as if something heavy passed without caring.",
-        "storage": "Boxes shoved aside. A path cleared through them, low to the\n"
-                   "floor, the width of a body that does not walk upright.",
+                  "as if something heavy passed through and did not care.",
+        "storage": "Boxes shoved aside. A path cleared low to the floor, the width\n"
+                   "of a body that does not walk upright.",
         "engineering_access": "The narrow passage. The open panel over the\n"
-                              "crawlspace gapes wider than you left it.",
-        "reactor_room": "The reactor roars with heat. Good — the noise hides you.\n"
+                              "crawlspace gapes wider than you left it. The draft is warm.",
+        "reactor_room": "The reactor roars. Good — the noise hides you.\n"
                         "The noise hides it, too.",
         "cargo_bay": "Tall crates, the dead forklift, the pooling dark.\n"
-                     "The dark is arranged differently than before.",
+                     "The dark is arranged differently than you left it.",
         "lower_hold": "A dead end. The scratch marks are fresh now, and wet,\n"
-                      "and they go higher up the wall than your reach.",
-        "maintenance_junction": "The junction of tunnels. One vent grille has been\n"
-                               "peeled outward from inside. Petals of bright metal.",
+                      "and they reach higher up the wall than your arm can.",
+        "maintenance_junction": "The junction of tunnels. One vent grille is peeled\n"
+                               "outward from the inside. Bright petals of torn metal.",
         "ventral_service": "The fan has stopped. In the new quiet you can hear it\n"
-                           "move through the ducts. Unhurried.",
+                           "move through the ducts. Unhurried. Patient as the beacon.",
         "observation": "The long window holds the planet's dark face.\n"
                        "Twice now, something has crossed it — on the inside of the glass.",
         "comms_hall": "The final approach. The equipment lights flicker in sequence,\n"
-                      "as if something keeps brushing the wall. The air is watched.",
+                      "as if something keeps brushing the wall. The air is held.",
         "communications": "A dead microphone. The transmitter, three sockets open.\n"
-                          "Behind you, the corridor breathes.",
+                          "Behind you the corridor breathes. In, and out, and in.",
         "landing_gear": "The bent strut. Fresh slime threads the metal — a trail\n"
-                        "leading up the hull, toward the airlock. Toward inside.",
+                        "climbing the hull, toward the airlock. Toward inside.",
     }
     for room_id, text in aboard.items():
         rooms[room_id].variants["aboard"] = text
