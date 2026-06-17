@@ -120,11 +120,11 @@ hatch-knock moment land.
 
 ---
 
-### Phase 2 — **The Intelligence** (v1.2)
+### Phase 2 — **The Intelligence** (v1.2) — ✅ DONE
 *Make the creature feel like it is thinking. This is what earns the
 "Isolation" comparison.*
 
-- [ ] **Visible learning.** The monster adapts to the player's habits:
+- [x] **Visible learning.** The monster adapts to the player's habits:
   - Reusing the **same hide spot** is already penalized internally — surface it:
     *"It goes to the cabinet first now."*
   - **Distraction fatigue:** each thrown-can trick raises a counter; past a
@@ -132,7 +132,7 @@ hatch-knock moment land.
     noise. It does not turn."*). Distractions become a scarce, real resource.
   - It **patrols toward your objective** late-game (camps Comms Hall during the
     final repair), not just toward your last sound.
-- [ ] **Line-of-sight / "it saw you" state.** If the monster enters your room
+- [x] **Line-of-sight / "it saw you" state.** If the monster enters your room
   while you're unhidden and you survive a distraction, set a `seen` memory so the
   scanner can deliver the spec's gut-punch line:
   ```
@@ -140,19 +140,19 @@ hatch-knock moment land.
   You lift the terminal.
   It is already looking at you.
   ```
-- [ ] **Vent ambushes, telegraphed.** When the monster takes a vent, the prior
+- [x] **Vent ambushes, telegraphed.** When the monster takes a vent, the prior
   turn shows a sign in an *adjacent* room (*"The grille two rooms over is
   peeled outward."*). Vents are spice, not teleportation (cap usage).
-- [ ] **Scanner imperfection** (per design pillar #1):
+- [x] **Scanner imperfection** (per design pillar #1):
   - One-turn **lag**: the scanner shows where it was, not where it is.
   - **Interference rooms** already scramble it (reactor/cave); add *intermittent
     dropouts* near the creature so a strong signal sometimes flickers to "lost".
   - Synthetic gets a *slightly* tighter read (already hooked; implement the diff).
-- [ ] **Sable, the synthetic NPC** (optional, one-shot heart):
+- [x] **Sable, the synthetic NPC** (optional, one-shot heart):
   - Found in Crew Quarters or Maintenance Junction; activates after boarding.
   - Gives 1–2 sparse hints; can open one route; can **sacrifice itself once** to
     save the player from an otherwise-lethal same-room event. (Spec §17 prose.)
-- [ ] **State surfaced through prose, never numbers.** Audit every monster state
+- [x] **State surfaced through prose, never numbers.** Audit every monster state
   (hunting/searching/investigating/feeding) for a distinct, sparse tell.
 
 **Phase 2 DoD:** a playtester can describe, unprompted, a moment where "it
