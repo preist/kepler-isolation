@@ -16,10 +16,14 @@ from the repository root, or directly:
 python3 src/__main__.py
 ```
 
-Requires Python 3 (standard library only).
+Requires Python 3 (standard library only). Run `./play --help` for options.
 
-Add `--fast` (or set `THIN_AIR_FAST=1`) to skip the typewriter pacing on
-dramatic beats. Pacing is also auto-disabled for non-interactive/piped runs.
+Options:
+
+- `--fast` (or `THIN_AIR_FAST=1`) — skip the typewriter pacing on dramatic
+  beats. Pacing is also auto-disabled for non-interactive/piped runs.
+- `--color` / `--no-color` — force or disable ANSI color (on by default for a
+  terminal; `NO_COLOR` is respected).
 
 ## How to play
 
@@ -33,7 +37,7 @@ transmitter, and `send` a warning.
 - **Suit:** `wear suit`, `remove suit`
 - **Survive:** `hide [spot]`, `crawl <dir>`, `run <dir>`, `throw <thing> <dir>`
 - **Win:** `install <part>`, `repair transmitter`, `send <message>`
-- **Meta:** `help`, `quit`, `restart`
+- **Meta:** `map`, `save`, `load`, `help`, `quit`, `restart`
 
 ## Rules that will kill you
 

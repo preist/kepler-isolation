@@ -272,8 +272,11 @@ class ThinAirGame:
         self.say('  "Wake Survey Team One."', slow=True)
         print()
         self.say("LV-417c is upgraded to priority recovery.", slow=True)
+        print()
+        self.say(self.c("They are not warned.", "1;36"), slow=True)
+        self.say(self.c("They are invited.", "1;36"), slow=True)
         print(RULE)
-        print("\nYou won. They are coming anyway.")
+        print("\nThe warning was sent. That was the mistake.")
 
     def prompt_again(self):
         try:
@@ -294,7 +297,27 @@ class ThinAirGame:
         game.main_loop()
 
 
+USAGE = """THE THIN AIR — a terminal survival-horror text adventure.
+
+  You land on a toxic planet, explore a cave, and come back with a passenger.
+  Reach Communications, repair the transmitter, and send the warning.
+
+Usage:
+  ./play [options]          (or: python3 src/__main__.py [options])
+
+Options:
+  --fast        Skip the typewriter pacing on dramatic beats.
+  --color       Force ANSI color (on by default for a terminal).
+  --no-color    Disable color. (NO_COLOR is also respected.)
+  -h, --help    Show this help and exit.
+
+In-game, type 'help' for the command list."""
+
+
 def main():
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print(USAGE)
+        return
     ThinAirGame().start()
 
 
