@@ -7,6 +7,12 @@ Repair the transmitter, send the warning — and try not to be found.
 ## Play
 
 ```sh
+./play
+```
+
+from the repository root, or directly:
+
+```sh
 python3 src/__main__.py
 ```
 
