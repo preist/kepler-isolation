@@ -7,6 +7,8 @@ Run:  python3 src/__main__.py
 
 import sys
 import os
+import time
+import textwrap
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -16,6 +18,7 @@ from parser import Parser
 from map_builder import create_rooms
 
 RULE = "-" * 60
+WIDTH = 74
 
 DEATH_TEXT = {
     "toxic": "",  # message already printed by the simulation
@@ -32,6 +35,42 @@ class ThinAirGame:
         self.gs = GameState()
         self.parser = Parser(self.gs)
         self.last_room_id = None
+        # Typewriter pacing is for atmosphere only: skip it for --fast, when the
+        # env var is set, or when input/output isn't a real terminal (piped runs,
+        # tests). That keeps scripted play and CI snappy and clean.
+        fast_flag = "--fast" in sys.argv or os.environ.get("THIN_AIR_FAST")
+        self.interactive = sys.stdin.isatty() and sys.stdout.isatty()
+        self.paced = self.interactive and not fast_flag
+
+    # ------------------------------------------------------------------ #
+    # Output helpers
+    # ------------------------------------------------------------------ #
+    def wrap(self, text: str) -> str:
+        """Wrap prose to WIDTH while preserving deliberate line breaks."""
+        out = []
+        for line in text.split("\n"):
+            out.append("\n".join(textwrap.wrap(line, WIDTH)) if line.strip() else "")
+        return "\n".join(out)
+
+    def say(self, text: str, slow: bool = False):
+        """Print a line, optionally with a typewriter cadence for big beats."""
+        if not (slow and self.paced):
+            print(text)
+            return
+        for ch in text:
+            sys.stdout.write(ch)
+            sys.stdout.flush()
+            time.sleep(0.018)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+    def beat(self):
+        """A held breath before a major moment — only when interactive."""
+        if self.paced:
+            try:
+                input()
+            except (KeyboardInterrupt, EOFError):
+                pass
 
     # ------------------------------------------------------------------ #
     def start(self):
@@ -107,7 +146,7 @@ class ThinAirGame:
         print()
         print(self.status_line())
         print()
-        print(room.describe(self.gs))
+        print(self.wrap(room.describe(self.gs)))
         print()
         print("Exits: " + (", ".join(room.exits.keys()) if room.exits else "none"))
         if room.items:
@@ -139,8 +178,12 @@ class ThinAirGame:
                 return
 
             if self.gs.advance:
+                was_aboard = self.gs.get_flag("monster_boarded")
                 for msg in self.gs.advance_world():
                     print("\n" + msg)
+                # The moment it comes aboard earns a held breath.
+                if self.gs.get_flag("monster_boarded") and not was_aboard:
+                    self.beat()
 
             if self.gs.death_state:
                 self.handle_death()
@@ -165,34 +208,36 @@ class ThinAirGame:
         print(RULE)
         if self.gs.death_state == "monster":
             text = DEATH_TEXT["monster"].get(self.gs.player.type, DEATH_TEXT["monster"]["human"])
-            print(text)
+            self.say(text, slow=True)
         elif self.gs.death_state == "toxic":
-            pass  # already printed
+            pass  # already printed by the simulation
         print(RULE)
         print("\nYou died.")
 
     def show_ending(self):
+        self.beat()
         print()
         print(RULE)
-        print("TRANSMISSION SENT.")
+        self.say("TRANSMISSION SENT.", slow=True)
         print()
-        print("> DO NOT COME HERE.")
+        self.say("> DO NOT COME HERE.", slow=True)
         print()
         print("FARLAND-GUTTENBER RELAY STATION")
         print("SEVENTEEN DAYS LATER")
         print()
-        print('  "Play it again."')
-        print('  "Do not come here."')
-        print('  "Was there contact?"')
-        print('  "Yes."')
-        print('  "Hostile?"')
-        print('  "Intelligent."')
+        for line in ('  "Play it again."',
+                     '  "Do not come here."',
+                     '  "Was there contact?"',
+                     '  "Yes."',
+                     '  "Hostile?"',
+                     '  "Intelligent."'):
+            self.say(line, slow=True)
         print()
         print("  A pause.")
         print()
-        print('  "Wake Survey Team One."')
+        self.say('  "Wake Survey Team One."', slow=True)
         print()
-        print("LV-417c is upgraded to priority recovery.")
+        self.say("LV-417c is upgraded to priority recovery.", slow=True)
         print(RULE)
         print("\nYou won. They are coming anyway.")
 
