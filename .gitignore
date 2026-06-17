@@ -1,0 +1,7 @@
+.walter/
+__pycache__/
+*.pyc
+.DS_Store
+.pytest_cache/
+savegame.json
+thin_air_game/savegame.json
