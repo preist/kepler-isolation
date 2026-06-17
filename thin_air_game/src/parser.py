@@ -1,494 +1,552 @@
 """
-Parser class for THE THIN AIR game
+Command parser for THE THIN AIR game.
+
+The parser turns a line of input into an action, mutates game state, sets the
+sound cost of the action, and flags whether the action advances time. The main
+loop runs the world simulation afterwards.
 """
 
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from typing import List, Tuple, Optional
-from game_state import GameState
-from player import Player
-from room import Room
-from item import Item
+from typing import List
+from game_state import GameState, SOUND_LABELS, TOXIC_ROOMS
+
+# Words we can safely drop anywhere in a command.
+FILLER = {"the", "a", "an", "at", "to", "on", "with", "using", "into", "in",
+          "of", "off", "down"}
+# (note: "in"/"out"/"up"/"down" as standalone directions are handled before filtering)
+
+DIRECTIONS = {"north", "south", "east", "west", "up", "down", "in", "out"}
 
 
 class Parser:
     def __init__(self, game_state: GameState):
         self.game_state = game_state
-        self.player = game_state.player
-        
-        # Command aliases
+
         self.aliases = {
-            "n": "north",
-            "s": "south",
-            "e": "east",
-            "w": "west",
-            "u": "up",
-            "d": "down",
-            "x": "examine",
-            "get": "take",
-            "i": "inventory",
-            "inv": "inventory",
+            "n": "north", "s": "south", "e": "east", "w": "west",
+            "u": "up", "d": "down",
+            "x": "examine", "exam": "examine",
+            "get": "take", "grab": "take", "pick": "take",
+            "i": "inventory", "inv": "inventory",
             "l": "look",
-            "scan": "scan",
-            "read": "read",
-            "use": "use",
-            "wear": "wear",
-            "remove": "remove",
-            "put on": "wear",
-            "take off": "remove",
-            "repair": "repair",
-            "install": "install",
-            "throw": "throw",
-            "hide": "hide",
-            "crawl": "crawl",
-            "run": "run",
-            "wait": "wait",
-            "listen": "listen",
-            "map": "map",
-            "help": "help",
-            "quit": "quit",
-            "restart": "restart"
+            "exit": "quit", "q": "quit",
+            "transmit": "send", "fix": "repair",
         }
-        
+
+    @property
+    def player(self):
+        return self.game_state.player
+
+    # ------------------------------------------------------------------ #
+    def _act(self, sound: int):
+        """Mark the current command as time-advancing with a sound cost."""
+        self.game_state.advance = True
+        self.game_state.last_action_sound = sound
+
+    def _meta(self):
+        self.game_state.advance = False
+
+    # ------------------------------------------------------------------ #
     def parse_command(self, command: str) -> str:
-        # Normalize command
+        self.game_state.advance = False
         command = command.strip().lower()
-        
-        # Handle empty commands
+        # Strip punctuation (keep letters, digits, spaces).
+        command = "".join(ch for ch in command if ch.isalnum() or ch.isspace())
         if not command:
             return "What?"
-        
-        # Split into words
+
         words = command.split()
-        
-        # Handle aliases
-        if words[0] in self.aliases:
+
+        # Standalone direction or "go <dir>".
+        if words[0] == "go" and len(words) > 1:
+            words = words[1:]
+        if words[0] in self.aliases and self.aliases[words[0]] not in ("examine", "take"):
             words[0] = self.aliases[words[0]]
-            command = " ".join(words)
-        
-        # Handle movement commands
-        if words[0] in ["north", "south", "east", "west", "up", "down", "in", "out"]:
-            return self.handle_movement(words[0])
-        
-        # Handle basic commands
-        elif words[0] == "look" or words[0] == "l":
-            return self.handle_look()
-        
-        elif words[0] == "examine" or words[0] == "x":
-            return self.handle_examine(words[1:])
-        
-        elif words[0] == "take" or words[0] == "get":
-            return self.handle_take(words[1:])
-        
-        elif words[0] == "inventory" or words[0] == "i" or words[0] == "inv":
-            return self.handle_inventory()
-        
-        elif words[0] == "wear":
-            return self.handle_wear(words[1:])
-        
-        elif words[0] == "remove":
-            return self.handle_remove(words[1:])
-        
-        elif words[0] == "scan":
-            return self.handle_scan()
-        
-        elif words[0] == "read":
-            return self.handle_read(words[1:])
-        
-        elif words[0] == "use":
-            return self.handle_use(words[1:])
-        
-        elif words[0] == "repair":
-            return self.handle_repair(words[1:])
-        
-        elif words[0] == "install":
-            return self.handle_install(words[1:])
-        
-        elif words[0] == "throw":
-            return self.handle_throw(words[1:])
-        
-        elif words[0] == "hide":
-            return self.handle_hide(words[1:])
-        
-        elif words[0] == "crawl":
-            return self.handle_crawl(words[1:])
-        
-        elif words[0] == "run":
-            return self.handle_run()
-        
-        elif words[0] == "wait":
-            return self.handle_wait()
-        
-        elif words[0] == "listen":
-            return self.handle_listen()
-        
-        elif words[0] == "map":
-            return self.handle_map()
-        
-        elif words[0] == "help":
-            return self.handle_help()
-        
-        elif words[0] == "quit" or words[0] == "exit":
-            return self.handle_quit()
-        
-        elif words[0] == "restart":
-            return self.handle_restart()
-        
-        else:
-            return f"I don't understand '{command}'. Type 'help' for commands."
-    
-    def handle_movement(self, direction: str) -> str:
-        current_room = self.game_state.rooms[self.game_state.current_room_id]
-        
-        if direction in current_room.exits:
-            new_room_id = current_room.exits[direction]
-            
-            # Check if moving to outside room without suit
-            if new_room_id in ["surface", "landing_gear", "ridge", "cave_mouth", "signal_cave", "black_pool"]:
-                if not self.player.is_wearing_suit():
-                    self.player.outside_exposure_turns += 1
-                    if self.player.outside_exposure_turns >= 2:
-                        return self.handle_toxic_death()
-                    else:
-                        return "You are not wearing a suit. The air burns immediately."
-                
-            # Move player
-            self.game_state.current_room_id = new_room_id
-            self.player.last_room_id = current_room.id
-            self.player.stayed_turns_in_room = 0
-            
-            # Update room visited status
-            current_room.visited = True
-            
-            # Add sound cost (walking)
-            self.game_state.sound_level = "quiet"
-            self.game_state.last_action_sound = 1
-            
-            return f"Moved {direction}."
-        else:
+        elif words[0] in self.aliases:
+            words[0] = self.aliases[words[0]]
+
+        # Multiword verb phrases.
+        joined = " ".join(words)
+        if joined.startswith("put on"):
+            words = ["wear"] + words[2:]
+        elif joined.startswith("take off") or joined.startswith("takeoff"):
+            words = ["remove"] + words[2:]
+        elif joined.startswith("pick up"):
+            words = ["take"] + words[2:]
+        elif joined.startswith("look at"):
+            words = ["examine"] + words[2:]
+
+        verb = words[0]
+
+        if verb in DIRECTIONS:
+            return self.handle_movement(verb)
+
+        # Strip filler from the argument portion for object-taking verbs.
+        args = [w for w in words[1:] if w not in FILLER]
+
+        dispatch = {
+            "look": lambda: self.handle_look(),
+            "examine": lambda: self.handle_examine(args),
+            "take": lambda: self.handle_take(args),
+            "drop": lambda: self.handle_drop(args),
+            "inventory": lambda: self.handle_inventory(),
+            "wear": lambda: self.handle_wear(args),
+            "remove": lambda: self.handle_remove(args),
+            "scan": lambda: self.handle_scan(),
+            "read": lambda: self.handle_read(args),
+            "use": lambda: self.handle_use(args),
+            "repair": lambda: self.handle_repair(args),
+            "install": lambda: self.handle_install(args),
+            "send": lambda: self.handle_send(args),
+            "throw": lambda: self.handle_throw(args),
+            "hide": lambda: self.handle_hide(args),
+            "crawl": lambda: self.handle_crawl(args),
+            "run": lambda: self.handle_run(args),
+            "wait": lambda: self.handle_wait(),
+            "listen": lambda: self.handle_listen(),
+            "open": lambda: self.handle_open(args),
+            "yell": lambda: self.handle_yell(),
+            "shout": lambda: self.handle_yell(),
+            "map": lambda: self.handle_map(),
+            "help": lambda: self.handle_help(),
+            "quit": lambda: self.handle_quit(),
+            "restart": lambda: self.handle_restart(),
+        }
+        if verb in dispatch:
+            return dispatch[verb]()
+
+        # Obvious nonsense gets a curt reply; everything else gets help.
+        if verb in {"lick", "eat", "kiss", "sing", "dance", "smell", "kill"}:
+            return "No."
+        return f"I don't understand '{command}'. Type 'help' for commands."
+
+    # ------------------------------------------------------------------ #
+    # Movement
+    # ------------------------------------------------------------------ #
+    def _move_to(self, direction: str, sound: int, verb_phrase: str) -> str:
+        room = self.game_state.current_room
+        if direction not in room.exits:
             return f"No exit {direction}."
-    
-    def handle_look(self) -> str:
-        # Look command doesn't advance time
-        current_room = self.game_state.rooms[self.game_state.current_room_id]
-        return f"{current_room.name}\n{current_room.description}"
-    
-    def handle_examine(self, words: List[str]) -> str:
-        if not words:
-            return "Examine what?"
-        
-        item_name = " ".join(words)
-        current_room = self.game_state.rooms[self.game_state.current_room_id]
-        
-        # Check room items
-        for item in current_room.items:
-            if item.matches_name(item_name):
-                return item.description
-        
-        # Check inventory
-        for item in self.player.inventory:
-            if item.matches_name(item_name):
-                return item.description
-        
-        # Check worn items
-        for item in self.player.worn_items:
-            if item.matches_name(item_name):
-                return item.description
-        
-        return f"You see no {item_name} here."
-    
-    def handle_take(self, words: List[str]) -> str:
-        if not words:
-            return "Take what?"
-        
-        item_name = " ".join(words)
-        current_room = self.game_state.rooms[self.game_state.current_room_id]
-        
-        # Find item in room
-        for item in current_room.items:
-            if item.matches_name(item_name):
-                if not item.portable:
-                    return f"You can't take {item.name}."
-                
-                # Move item to inventory
-                current_room.remove_item(item)
-                self.player.add_to_inventory(item)
-                
-                # Add sound cost (taking)
-                self.game_state.sound_level = "quiet"
-                self.game_state.last_action_sound = 1
-                
-                return f"Taken."
-        
-        return f"You see no {item_name} here."
-    
-    def handle_inventory(self) -> str:
-        if not self.player.inventory and not self.player.worn_items:
-            return "You carry nothing."
-        
-        items = []
-        for item in self.player.inventory:
-            items.append(item.name)
-        
-        for item in self.player.worn_items:
-            items.append(f"{item.name}, worn")
-        
-        return f"You carry:\n- {', '.join(items)}"
-    
-    def handle_wear(self, words: List[str]) -> str:
-        if not words:
-            return "Wear what?"
-        
-        item_name = " ".join(words)
-        current_room = self.game_state.rooms[self.game_state.current_room_id]
-        
-        # Find item in room or inventory
-        item = None
-        for i in current_room.items:
-            if i.matches_name(item_name):
-                item = i
-                break
-        
-        if not item:
-            for i in self.player.inventory:
-                if i.matches_name(item_name):
-                    item = i
-                    break
-        
-        if not item:
-            return f"You don't have {item_name}."
-        
-        if not item.wearable:
-            return f"You can't wear {item.name}."
-        
-        # Remove from inventory and add to worn items
-        if item in self.player.inventory:
-            self.player.remove_from_inventory(item)
-        
-        self.player.worn_items.append(item)
-        self.player.suit_worn = True
-        
-        # Add sound cost (wearing suit)
-        self.game_state.sound_level = "audible"
-        self.game_state.last_action_sound = 2
-        
-        return f"You put on the {item.name}."
-    
-    def handle_remove(self, words: List[str]) -> str:
-        if not words:
-            return "Remove what?"
-        
-        item_name = " ".join(words)
-        
-        # Find item in worn items
-        for item in self.player.worn_items:
-            if item.matches_name(item_name):
-                self.player.worn_items.remove(item)
-                self.player.inventory.append(item)
-                self.player.suit_worn = False
-                
-                # Add sound cost (removing suit)
-                self.game_state.sound_level = "quiet"
-                self.game_state.last_action_sound = 1
-                
-                return f"You remove the {item.name}."
-        
-        return f"You're not wearing {item_name}."
-    
-    def handle_scan(self) -> str:
-        # Check if player has terminal
-        if not self.player.has_terminal:
-            return "You don't have a scanner."
-        
-        # Add sound cost (scanning)
-        self.game_state.sound_level = "quiet"
-        self.game_state.last_action_sound = 1
-        
-        # Check monster phase
-        if not self.game_state.monster.active:
-            return "No internal motion detected."
-        
-        # For now, just return a generic scan result
-        return "MOTION: west\nDISTANCE: 5+ moves\nSIGNAL: intermittent"
-    
-    def handle_read(self, words: List[str]) -> str:
-        if not words:
-            return "Read what?"
-        
-        item_name = " ".join(words)
-        current_room = self.game_state.rooms[self.game_state.current_room_id]
-        
-        # Check room items
-        for item in current_room.items:
-            if item.matches_name(item_name) and item.readable_text:
-                return item.readable_text
-        
-        # Check inventory
-        for item in self.player.inventory:
-            if item.matches_name(item_name) and item.readable_text:
-                return item.readable_text
-        
-        return f"You can't read {item_name}."
-    
-    def handle_use(self, words: List[str]) -> str:
-        if not words:
-            return "Use what?"
-        
-        item_name = " ".join(words)
-        
-        # Check inventory
-        for item in self.player.inventory:
-            if item.matches_name(item_name):
-                if item.use_effect:
-                    return item.use_effect
-                else:
-                    return f"You can't use {item.name} like that."
-        
-        return f"You don't have {item_name}."
-    
-    def handle_repair(self, words: List[str]) -> str:
-        if not words:
-            return "Repair what?"
-        
-        target = " ".join(words)
-        
-        # Check if we're in communications room
-        if self.game_state.current_room_id != "communications":
-            return "You can only repair the transmitter here."
-        
-        # Check if all parts are collected
-        if (self.player.has_power_coupler and 
-            self.player.has_signal_relay and 
-            self.player.has_antenna_key):
-            
-            # Add sound cost (repairing)
-            self.game_state.sound_level = "loud"
-            self.game_state.last_action_sound = 3
-            
-            self.player.transmitter_repaired = True
-            self.game_state.win_state = True
-            return "TRANSMISSION READY.\nMessage?"
-        else:
-            return "You need all parts to repair the transmitter."
-    
-    def handle_install(self, words: List[str]) -> str:
-        if not words:
-            return "Install what?"
-        
-        item_name = " ".join(words)
-        
-        # Check if we're in communications room
-        if self.game_state.current_room_id != "communications":
-            return "You can only install parts here."
-        
-        # Find the item
-        item = None
-        for i in self.player.inventory:
-            if i.matches_name(item_name):
-                item = i
-                break
-        
-        if not item:
-            return f"You don't have {item_name}."
-        
-        # Check if it's a required part
-        if item.name == "power coupler":
-            self.player.has_power_coupler = True
-            self.player.remove_from_inventory(item)
-            return "Power coupler installed."
-        elif item.name == "signal relay":
-            self.player.has_signal_relay = True
-            self.player.remove_from_inventory(item)
-            return "Signal relay installed."
-        elif item.name == "antenna key":
-            self.player.has_antenna_key = True
-            self.player.remove_from_inventory(item)
-            return "Antenna key installed."
-        else:
-            return f"You can't install {item.name} here."
-    
-    def handle_throw(self, words: List[str]) -> str:
-        if not words:
-            return "Throw what?"
-        
-        item_name = " ".join(words)
-        
-        # Check inventory
-        for item in self.player.inventory:
-            if item.matches_name(item_name):
-                self.player.remove_from_inventory(item)
-                
-                # Add sound cost (throwing)
-                self.game_state.sound_level = "loud"
-                self.game_state.last_action_sound = 3
-                
-                return f"You throw the {item.name}."
-        
-        return f"You don't have {item_name}."
-    
-    def handle_hide(self, words: List[str]) -> str:
-        # For now, just return a generic response
-        return "You hide."
-    
+        dest_id = room.exits[direction]
+
+        self.game_state.current_room_id = dest_id
+        self.player.last_room_id = room.id
+        self.player.stayed_turns_in_room = 0
+        self.player.hidden = False
+        self.player.hidden_spot = None
+        room.visited = True
+        self.game_state.rooms[dest_id].visited = True
+        self.game_state.visited_rooms.add(dest_id)
+
+        # Flags driven by location.
+        if dest_id in TOXIC_ROOMS:
+            self.game_state.set_flag("went_outside", True)
+        if dest_id in ("signal_cave", "black_pool"):
+            self.game_state.set_flag("entered_cave", True)
+        if dest_id == "signal_cave":
+            self.game_state.trigger_cave()
+
+        self._act(sound)
+        return f"{verb_phrase} {direction}."
+
+    def handle_movement(self, direction: str) -> str:
+        return self._move_to(direction, 1, "You walk")
+
     def handle_crawl(self, words: List[str]) -> str:
         if not words:
             return "Crawl where?"
-        
+        return self._move_to(words[0], 0, "You crawl")
+
+    def handle_run(self, words: List[str]) -> str:
+        if not words:
+            return "Run where?"
         direction = words[0]
-        current_room = self.game_state.rooms[self.game_state.current_room_id]
-        
-        if direction in current_room.exits:
-            new_room_id = current_room.exits[direction]
-            
-            # Move player
-            self.game_state.current_room_id = new_room_id
-            self.player.last_room_id = current_room.id
-            self.player.stayed_turns_in_room = 0
-            
-            # Add sound cost (crawling)
-            self.game_state.sound_level = "quiet"
-            self.game_state.last_action_sound = 1
-            
-            return f"You crawl {direction}."
-        else:
+        if direction not in self.game_state.current_room.exits:
             return f"No exit {direction}."
-    
-    def handle_run(self) -> str:
-        # Add sound cost (running)
-        self.game_state.sound_level = "loud"
+        result = self._move_to(direction, 3, "You run")
         self.game_state.last_action_sound = 3
-        
-        return "You run."
-    
-    def handle_wait(self) -> str:
-        # Add sound cost (waiting)
-        self.game_state.sound_level = "silent"
-        self.game_state.last_action_sound = 0
-        
-        return "You wait."
-    
+        return result
+
+    # ------------------------------------------------------------------ #
+    # Observation
+    # ------------------------------------------------------------------ #
+    def handle_look(self) -> str:
+        self._meta()
+        room = self.game_state.current_room
+        out = [room.name, room.description]
+        if room.exits:
+            out.append("Exits: " + ", ".join(room.exits.keys()))
+        if room.items:
+            out.append("Items: " + ", ".join(i.name for i in room.items))
+        return "\n".join(out)
+
+    def handle_examine(self, words: List[str]) -> str:
+        if not words:
+            return "Examine what?"
+        name = " ".join(words)
+        self._act(1)
+        for item in self.game_state.current_room.items:
+            if item.matches_name(name):
+                # Examining the beacon triggers the cave event.
+                if "beacon" in item.name and self.game_state.get_flag("entered_cave"):
+                    self.game_state.set_flag("examined_beacon", True)
+                    self.game_state.trigger_cave()
+                return item.description
+        for item in self.player.inventory + self.player.worn_items:
+            if item.matches_name(name):
+                return item.description
+        # A couple of fixed features.
+        if name in ("transmitter", "console") and self.game_state.current_room_id == "communications":
+            self.game_state.set_flag("comms_damaged_known", True)
+            return ("The transmitter is dead. Three sockets gape open:\n"
+                    "power coupler, signal relay, antenna key.")
+        self._meta()
+        return f"You see no {name} here."
+
+    def handle_read(self, words: List[str]) -> str:
+        if not words:
+            return "Read what?"
+        name = " ".join(words)
+        self._act(1)
+        for item in (self.game_state.current_room.items
+                     + self.player.inventory + self.player.worn_items):
+            if item.matches_name(name) and item.readable_text:
+                return item.readable_text
+        self._meta()
+        return f"There is nothing to read on the {name}."
+
     def handle_listen(self) -> str:
-        return "You listen."
-    
+        self._act(0)
+        m = self.game_state.monster
+        if m.active and m.phase == "aboard":
+            dist, _ = self.game_state.shortest_path(self.game_state.current_room_id,
+                                                    m.current_room_id)
+            if dist == 0:
+                return "Breathing. Not yours."
+            if dist is not None and dist <= 2:
+                return "Something moves nearby. Close."
+            return "Distant sounds. The ship settling. Maybe."
+        return "Only the hum of the ship."
+
+    # ------------------------------------------------------------------ #
+    # Inventory / items
+    # ------------------------------------------------------------------ #
+    def handle_take(self, words: List[str]) -> str:
+        if not words:
+            return "Take what?"
+        name = " ".join(words)
+        room = self.game_state.current_room
+        for item in room.items:
+            if item.matches_name(name):
+                if not item.portable:
+                    self._meta()
+                    return f"You can't take the {item.name}."
+                room.remove_item(item)
+                self.player.add_to_inventory(item)
+                if item.name == "hand terminal":
+                    self.player.has_terminal = True
+                    self.game_state.set_flag("has_terminal", True)
+                self._act(1)
+                return f"You take the {item.name}."
+        self._meta()
+        return f"You see no {name} here."
+
+    def handle_drop(self, words: List[str]) -> str:
+        if not words:
+            return "Drop what?"
+        name = " ".join(words)
+        item = self.player.has_item(name)
+        if not item:
+            self._meta()
+            return f"You aren't carrying {name}."
+        self.player.remove_from_inventory(item)
+        self.game_state.current_room.items.append(item)
+        self._act(1)
+        return f"You set down the {item.name}."
+
+    def handle_inventory(self) -> str:
+        self._meta()
+        if not self.player.inventory and not self.player.worn_items:
+            return "You carry nothing."
+        lines = ["You carry:"]
+        for item in self.player.inventory:
+            lines.append(f"  - {item.name}")
+        for item in self.player.worn_items:
+            lines.append(f"  - {item.name} (worn)")
+        return "\n".join(lines)
+
+    def handle_wear(self, words: List[str]) -> str:
+        if not words:
+            return "Wear what?"
+        name = " ".join(words)
+        item = None
+        for i in self.game_state.current_room.items:
+            if i.matches_name(name):
+                item = i
+                source = "room"
+                break
+        else:
+            for i in self.player.inventory:
+                if i.matches_name(name):
+                    item = i
+                    source = "inv"
+                    break
+        if not item:
+            self._meta()
+            return f"You don't have {name}."
+        if not item.wearable:
+            self._meta()
+            return f"You can't wear the {item.name}."
+        if source == "room":
+            self.game_state.current_room.remove_item(item)
+        else:
+            self.player.remove_from_inventory(item)
+        self.player.worn_items.append(item)
+        item.worn = True
+        self.player.suit_worn = True
+        self.game_state.set_flag("suit_worn", True)
+        self._act(2)
+        return "The seals close around your throat.\nSuit pressure holds."
+
+    def handle_remove(self, words: List[str]) -> str:
+        if not words:
+            return "Remove what?"
+        name = " ".join(words)
+        for item in self.player.worn_items:
+            if item.matches_name(name):
+                self.player.worn_items.remove(item)
+                self.player.inventory.append(item)
+                item.worn = False
+                self.player.suit_worn = False
+                self.game_state.set_flag("suit_worn", False)
+                self._act(1)
+                warn = ""
+                if self.game_state.current_room_id in TOXIC_ROOMS:
+                    warn = "\nThe air bites instantly. Get sealed or get inside."
+                return f"You take off the {item.name}.{warn}"
+        self._meta()
+        return f"You're not wearing {name}."
+
+    def handle_use(self, words: List[str]) -> str:
+        if not words:
+            return "Use what?"
+        name = " ".join(words)
+        item = self.player.has_item(name)
+        if not item:
+            self._meta()
+            return f"You don't have {name}."
+        # Medkit: humans/specialists only.
+        if item.name == "medkit":
+            if self.player.type == "synthetic":
+                self._meta()
+                return "Your chassis has no use for a medkit."
+            self.player.health = 100
+            self._act(1)
+            return "You patch yourself up. Steadier now."
+        if item.use_effect:
+            self._act(item.sound_on_use or 1)
+            return item.use_effect
+        self._meta()
+        return f"You can't use the {item.name} like that."
+
+    # ------------------------------------------------------------------ #
+    # Scanner
+    # ------------------------------------------------------------------ #
+    def handle_scan(self) -> str:
+        if not self.player.has_terminal:
+            self._meta()
+            return "You have no scanner. (Find the hand terminal.)"
+        self._act(1)
+        m = self.game_state.monster
+
+        if not m.active:
+            if self.game_state.get_flag("cave_triggered"):
+                return "MOTION: outside\nDISTANCE: uncertain\nSIGNAL: intermittent"
+            return "No internal motion detected."
+
+        room = self.game_state.current_room
+        if room.scanner_interference:
+            return "MOTION: interference\nDISTANCE: unknown\nSIGNAL: scrambled"
+
+        if m.current_room_id == self.game_state.current_room_id:
+            return "MOTION: here\nDISTANCE: 0\nSIGNAL: inside the room"
+
+        dist, direction = self.game_state.shortest_path(
+            self.game_state.current_room_id, m.current_room_id)
+        if dist is None:
+            return "MOTION: none\nDISTANCE: ---\nSIGNAL: lost"
+        # Synthetics get a crisper read.
+        signal = "strong" if dist <= 2 else "intermittent"
+        moves = "1 move" if dist == 1 else f"{dist} moves"
+        return f"MOTION: {direction}\nDISTANCE: {moves}\nSIGNAL: {signal}"
+
+    # ------------------------------------------------------------------ #
+    # Hiding / distraction
+    # ------------------------------------------------------------------ #
+    def handle_hide(self, words: List[str]) -> str:
+        room = self.game_state.current_room
+        if not room.hiding_spots:
+            self._meta()
+            return "There is nowhere to hide here."
+        name = " ".join(words) if words else None
+        spot = room.find_hiding_spot(name)
+        if not spot:
+            self._meta()
+            return f"You can't hide {name} here." if name else "There is nowhere to hide here."
+        reused = self.player.hidden_spot is spot or spot["reuse"] > 0
+        spot["reuse"] += 1
+        self.player.hidden = True
+        self.player.hidden_spot = spot
+        self._act(1)
+        if reused:
+            return f"You take cover again — {spot['name']}.\nThe same hiding place feels smaller now."
+        return f"You take cover — {spot['name']}. You go still."
+
+    def handle_throw(self, words: List[str]) -> str:
+        if not words:
+            return "Throw what?"
+        # Allow "throw can east".
+        direction = None
+        if words[-1] in DIRECTIONS:
+            direction = words[-1]
+            words = words[:-1]
+        name = " ".join(words) if words else "can"
+        item = self.player.has_item(name)
+        if not item:
+            self._meta()
+            return f"You don't have {name} to throw."
+        self.player.remove_from_inventory(item)
+        m = self.game_state.monster
+        if direction and direction in self.game_state.current_room.exits:
+            target = self.game_state.current_room.exits[direction]
+            if m.active:
+                m.last_heard_room_id = target
+                m.turns_since_heard = 0
+                m.add_suspicion(target, 8)
+                m.set_distracted(self.game_state.turn_count + 2)
+            # Noise is over there, not here.
+            self.game_state.current_room.items  # noop
+            self._act(0)
+            self.game_state.last_action_sound = 0
+            return f"The {item.name} clatters away to the {direction}. Something shifts toward the sound."
+        # No direction: just noise where you are.
+        self._act(3)
+        return f"The {item.name} clatters across the floor. Loud."
+
+    # ------------------------------------------------------------------ #
+    # Repair / win
+    # ------------------------------------------------------------------ #
+    def handle_install(self, words: List[str]) -> str:
+        if self.game_state.current_room_id != "communications":
+            self._meta()
+            return "There is nothing to install here."
+        if not words:
+            return "Install what?"
+        name = " ".join(words)
+        item = self.player.has_item(name)
+        if not item:
+            self._meta()
+            return f"You aren't carrying {name}."
+        mapping = {
+            "power coupler": "has_power_coupler",
+            "signal relay": "has_signal_relay",
+            "antenna key": "has_antenna_key",
+        }
+        if item.name not in mapping:
+            self._meta()
+            return f"The {item.name} doesn't fit any socket."
+        setattr(self.player, mapping[item.name], True)
+        self.player.remove_from_inventory(item)
+        self._act(2)
+        left = 3 - self.player.installed_parts()
+        tail = "" if left == 0 else f" {left} socket{'s' if left != 1 else ''} still open."
+        return f"The {item.name} seats with a click.{tail}"
+
+    def handle_repair(self, words: List[str]) -> str:
+        if self.game_state.current_room_id != "communications":
+            self._meta()
+            return "There is nothing here to repair."
+        # Auto-install any carried parts, to be forgiving.
+        for part, attr in (("power coupler", "has_power_coupler"),
+                           ("signal relay", "has_signal_relay"),
+                           ("antenna key", "has_antenna_key")):
+            item = self.player.has_item(part)
+            if item:
+                setattr(self.player, attr, True)
+                self.player.remove_from_inventory(item)
+        if self.player.installed_parts() < 3:
+            missing = []
+            if not self.player.has_power_coupler:
+                missing.append("power coupler")
+            if not self.player.has_signal_relay:
+                missing.append("signal relay")
+            if not self.player.has_antenna_key:
+                missing.append("antenna key")
+            self._act(2)
+            return "The transmitter stays dead. Still missing: " + ", ".join(missing) + "."
+        self.player.transmitter_repaired = True
+        self.game_state.set_flag("transmitter_repaired", True)
+        self.game_state.game_phase = "final_repair"
+        self._act(3)  # loud — draws the monster
+        return ("You force the panel shut. Current sings through the transmitter.\n\n"
+                "TRANSMISSION READY.\nMessage? (type: send <your message>)")
+
+    def handle_send(self, words: List[str]) -> str:
+        if not self.player.transmitter_repaired:
+            self._meta()
+            if self.game_state.current_room_id != "communications":
+                return "You have nothing to send from here."
+            return "The transmitter is dead. Repair it first."
+        self._act(2)
+        self.game_state.set_flag("warning_sent", True)
+        self.game_state.win_state = True
+        self.game_state.game_phase = "won"
+        return "You key the transmitter."
+
+    # ------------------------------------------------------------------ #
+    def handle_open(self, words: List[str]) -> str:
+        self._act(2)
+        return "It opens. Nothing useful inside."
+
+    def handle_yell(self) -> str:
+        self._act(4)
+        return "You shout into the dark.\nThe ship swallows it. Something else does not."
+
+    def handle_wait(self) -> str:
+        self._act(0)
+        return "You wait. Time passes."
+
+    # ------------------------------------------------------------------ #
+    # Meta
+    # ------------------------------------------------------------------ #
     def handle_map(self) -> str:
-        # Return a simple map of visited rooms
-        visited_rooms = [room.name for room in self.game_state.rooms.values() if room.visited]
-        if not visited_rooms:
-            return "No rooms visited yet."
-        
-        return f"Known rooms:\n- {chr(10) + '- '.join(visited_rooms)}"
-    
+        self._meta()
+        visited = [r.name for r in self.game_state.rooms.values() if r.visited]
+        if not visited:
+            return "You have not explored anywhere yet."
+        return "Known rooms:\n" + "\n".join(f"  - {n}" for n in visited)
+
     def handle_help(self) -> str:
-        return "Common commands:\n  north/south/east/west, in/out, up/down\n  look, examine <thing>, take <thing>\n  inventory, wear <thing>, use <thing>\n  scan, listen, hide, crawl <direction>\n  repair <thing>, read <thing>\n  map, help, quit"
-    
+        self._meta()
+        return (
+            "Common commands:\n"
+            "  movement: north/south/east/west, in/out, up/down (or n,s,e,w...)\n"
+            "  look, examine <thing> (x), take <thing> (get), drop <thing>\n"
+            "  inventory (i), wear <thing>, remove <thing>, use <thing>, read <thing>\n"
+            "  scan, listen, hide [spot], crawl <dir>, run <dir>, throw <thing> [dir]\n"
+            "  install <part>, repair transmitter, send <message>\n"
+            "  wait, map, help, quit, restart"
+        )
+
     def handle_quit(self) -> str:
-        return "Goodbye!"
-    
+        self._meta()
+        self.game_state.quit_requested = True
+        return "You let go.\nGoodbye."
+
     def handle_restart(self) -> str:
-        return "Restarting game..."
-    
-    def handle_toxic_death(self) -> str:
-        # Handle toxic air death
-        return "You make it four steps.\nThat is all."
+        self._meta()
+        self.game_state.restart_requested = True
+        return "Restarting..."

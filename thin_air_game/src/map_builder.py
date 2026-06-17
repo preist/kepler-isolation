@@ -1,198 +1,226 @@
 """
-Map builder for THE THIN AIR game
-Creates and initializes all rooms with their correct exits as specified in the requirements.
+Map builder for THE THIN AIR game.
+Creates and initializes all rooms with their exits, items, hazards, vents,
+hiding spots, and sound/scanner properties.
 """
 
-from .room import Room
-from .item import Item
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from room import Room
+from item import Item
+
+# Monster-only vent shortcuts (bidirectional).
+VENTS = [
+    ("airlock", "ventral_service"),
+    ("cargo_bay", "reactor_room"),
+    ("observation", "central_corridor"),
+    ("med_bay", "maintenance_junction"),
+]
+
+# room_id -> list of hiding spots
+HIDING_SPOTS = {
+    "med_bay": [{"name": "cabinet", "quality": 45, "reuse": 0}],
+    "crew_quarters": [{"name": "under bunk", "quality": 35, "reuse": 0}],
+    "cargo_bay": [{"name": "behind crates", "quality": 50, "reuse": 0}],
+    "engineering_access": [{"name": "crawlspace", "quality": 40, "reuse": 0}],
+    "communications": [{"name": "under console", "quality": 30, "reuse": 0}],
+    "storage": [{"name": "shelving", "quality": 40, "reuse": 0}],
+}
+
+TOXIC_ROOMS = {"surface", "landing_gear", "ridge", "cave_mouth", "signal_cave", "black_pool"}
 
 
 def create_rooms():
-    """
-    Create all 22 rooms with their properties and exits according to the specification.
-    """
+    """Create all 22 rooms with their properties and exits."""
     rooms = {}
-    
-    # Ship rooms
+
+    # --- Ship ---
     rooms["cockpit"] = Room(
         name="Cockpit",
         description="Dead stars in the glass. The console waits with one green light.",
-        items=[Item("hand terminal", "terminal,scanner", "A portable scanner that can detect motion.", portable=True, wearable=False)],
+        items=[Item("hand terminal", "terminal,scanner", "A rugged motion scanner. It reads direction and distance.", portable=True)],
         exits={"south": "central_corridor"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["central_corridor"] = Room(
         name="Central Corridor",
         description="Low ceiling. Handrails. Old boot marks. The lights hum in pairs.",
         items=[],
         exits={"north": "cockpit", "east": "airlock", "south": "med_bay", "west": "engineering_access"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["airlock"] = Room(
         name="Airlock",
-        description="Suit locker. Outer hatch. Inner hatch. A red card says: TWO MOVES WITHOUT SEAL.",
-        items=[Item("EVA suit", "suit,eva", "A full EVA suit for surface exploration.", portable=True, wearable=True)],
+        description="A narrow chamber. Suit locker, outer hatch, inner hatch.\nA red card reads: TWO MOVES WITHOUT SEAL.",
+        items=[Item("EVA suit", "suit,eva", "A full EVA suit. Helmet, gloves, hard seals.", portable=True, wearable=True)],
         exits={"west": "central_corridor", "out": "surface"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["med_bay"] = Room(
         name="Med Bay",
-        description="Medical supplies. A recorder log sits on the table.",
-        items=[Item("medkit", "medic,health", "A small medical kit for treating injuries.", portable=True), Item("recorder log", "log,note", "A recording of previous crew member's last moments.", portable=False, readable_text="I can't hear it anymore. It's in the walls.")],
+        description="Medical supplies behind glass. A recorder log sits on the table.",
+        items=[
+            Item("medkit", "medic,kit", "A small medical kit.", portable=True),
+            Item("recorder log", "log,note,recording", "A crew recording.", portable=True,
+                 readable_text="\"I can't hear it anymore.\nIt's in the walls.\""),
+        ],
         exits={"north": "central_corridor", "east": "crew_quarters"},
-        hidden_items=["cabinet"]
+        hidden_items=[],
     )
-    
     rooms["crew_quarters"] = Room(
         name="Crew Quarters",
-        description="Bunks and personal lockers. A faint smell of old coffee lingers.",
-        items=[Item("access card", "card,id,identification", "A corporate access card for restricted areas.", portable=True), Item("bunk", "bed", "A simple bunk bed.", portable=False)],
+        description="Bunks and personal lockers. A faint smell of old coffee.",
+        items=[Item("access card", "card,id", "A corporate access card.", portable=True)],
         exits={"west": "med_bay", "south": "galley"},
-        hidden_items=["under bunk"]
+        hidden_items=[],
     )
-    
     rooms["galley"] = Room(
         name="Galley",
-        description="A small kitchen area. Loose cans are scattered on the floor.",
-        items=[Item("loose can", "can,food", "A loose food can that makes noise when moved.", portable=True), Item("water recycler", "recycler,water", "A water recycling machine.", portable=False)],
+        description="A cramped kitchen. Loose cans scattered across the floor.",
+        items=[Item("loose can", "can", "An empty can. Light. Throwable.", portable=True, sound_on_use=3)],
         exits={"north": "crew_quarters", "west": "storage"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["storage"] = Room(
         name="Storage",
-        description="Boxes and crates. A musty smell fills the air.",
-        items=[Item("power coupler", "coupler,part", "A power coupling part needed for transmitter repair.", portable=True, required_for_win=True)],
+        description="Boxes and crates. Maintenance tags curl off a shelf.",
+        items=[
+            Item("power coupler", "coupler", "A power coupling unit. Heavy.", portable=True, required_for_win=True),
+            Item("flare", "flares", "An emergency flare. Burns loud and bright.", portable=True, sound_on_use=3),
+        ],
         exits={"east": "galley", "south": "cargo_bay", "west": "engineering_access"},
-        hidden_items=["shelving"]
+        hidden_items=[],
     )
-    
     rooms["engineering_access"] = Room(
         name="Engineering Access",
-        description="A narrow passage. A panel hangs open.",
-        items=[],
+        description="A narrow passage. A panel hangs open over a crawlspace.",
+        items=[Item("repair kit", "kit,tools", "A basic repair kit.", portable=True)],
         exits={"east": "central_corridor", "south": "reactor_room", "west": "storage"},
-        hidden_items=["crawlspace"]
+        hidden_items=[],
     )
-    
     rooms["reactor_room"] = Room(
         name="Reactor Room",
-        description="The reactor hums with heat. A control panel glows dimly.",
-        items=[Item("signal relay", "relay,part", "A signal relay part needed for transmitter repair.", portable=True, required_for_win=True)],
+        description="The reactor roars with heat. The noise drowns everything small.",
+        items=[Item("signal relay", "relay", "A signal transmission relay.", portable=True, required_for_win=True)],
         exits={"north": "engineering_access"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["cargo_bay"] = Room(
         name="Cargo Bay",
-        description="Large crates and forklift tracks. The air is thick with dust.",
-        items=[Item("antenna key", "key,part", "An antenna key needed for transmitter repair.", portable=True, required_for_win=True), Item("crate", "box", "A large crate.", portable=False)],
+        description="Tall crates and a dead forklift. The dark pools in the corners.",
+        items=[Item("antenna key", "key", "An antenna tuning key.", portable=True, required_for_win=True)],
         exits={"north": "storage", "east": "maintenance_junction", "south": "lower_hold"},
-        hidden_items=["behind crates"]
+        hidden_items=[],
     )
-    
     rooms["lower_hold"] = Room(
         name="Lower Hold",
-        description="A dark, narrow space. Scratch marks on the walls.",
-        items=[Item("beacon fragment", "fragment,part", "A piece of a distress beacon.", portable=True)],
+        description="A dead-end space. Scratch marks rake the walls, low down.",
+        items=[Item("beacon fragment", "fragment", "A shard of an old distress beacon.", portable=True)],
         exits={"north": "cargo_bay"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["maintenance_junction"] = Room(
         name="Maintenance Junction",
-        description="A junction point for maintenance tunnels. Tools are scattered.",
-        items=[Item("repair kit", "kit,tool", "A repair kit for fixing equipment.", portable=True)],
+        description="A junction of service tunnels. A tool rack, mostly empty.",
+        items=[],
         exits={"west": "cargo_bay", "east": "comms_hall", "north": "ventral_service"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["ventral_service"] = Room(
         name="Ventral Service",
-        description="A mechanical room with noisy fans. Ventilation ducts lead everywhere.",
+        description="A mechanical crawl. A fan turns somewhere, ragged.",
         items=[],
         exits={"south": "maintenance_junction", "east": "observation"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["observation"] = Room(
         name="Observation",
-        description="A long window. The planet presses its dark face against it.",
+        description="A long window. The planet presses its dark face against the glass.",
         items=[],
         exits={"west": "ventral_service", "south": "comms_hall"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["comms_hall"] = Room(
         name="Comms Hall",
-        description="A corridor leading to the communications room. The walls are lined with equipment.",
+        description="The final approach. Equipment lines the walls. The air feels watched.",
         items=[],
         exits={"north": "observation", "west": "maintenance_junction", "east": "communications"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["communications"] = Room(
         name="Communications",
-        description="The heart of the ship's communication system. The transmitter is damaged.",
-        items=[Item("transmitter", "radio,comm,transmit", "A damaged communication transmitter that needs repair.", portable=False, install_target="transmitter")],
+        description="A dead microphone. A damaged transmitter with three open sockets.",
+        items=[],
         exits={"west": "comms_hall"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
-    # Surface/cave rooms
+
+    # --- Surface / cave ---
     rooms["surface"] = Room(
         name="Surface",
-        description="Black dust moves like smoke. Your suit light finds the cave mouth east.",
+        description="Black dust moves like smoke. Your light finds the ridge east.",
         items=[],
         exits={"in": "airlock", "east": "ridge", "south": "landing_gear"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["landing_gear"] = Room(
         name="Landing Gear",
-        description="The landing gear is damaged. Strange slime marks are on the metal.",
-        items=[Item("slime mark", "mark,slime", "A strange mark that looks like it was left by something organic.", portable=False)],
+        description="A bent strut. Later there will be slime here. Not yet.",
+        items=[],
         exits={"north": "surface"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["ridge"] = Room(
         name="Ridge",
-        description="The ridge is narrow. The cave mouth is just east.",
+        description="A narrow spine of rock. The cave mouth gapes east.",
         items=[],
         exits={"west": "surface", "east": "cave_mouth"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["cave_mouth"] = Room(
         name="Cave Mouth",
         description="The signal is louder here. Not stronger. Louder.",
         items=[],
         exits={"west": "ridge", "down": "signal_cave"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["signal_cave"] = Room(
         name="Signal Cave",
-        description="A narrow cave with strange markings on the walls. The signal is strongest here.",
-        items=[Item("distress beacon", "beacon,signal", "A damaged distress beacon that triggered the rescue mission.", portable=False, readable_text="DO NOT OPEN THE...")],
+        description="Wet walls, strange markings. A beacon blinks in the dark.",
+        items=[Item("distress beacon", "beacon,signal", "A beacon, old but undegraded. That should not be possible.",
+                    portable=False, readable_text="DO NOT OPEN THE—")],
         exits={"up": "cave_mouth", "east": "black_pool"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
     rooms["black_pool"] = Room(
         name="Black Pool",
-        description="A small pool of black liquid. The walls are covered in strange marks.",
-        items=[Item("old helmet", "helmet,head", "An old helmet that looks like it was worn by someone else.", portable=True)],
+        description="A still pool of black liquid. Something folded lies at its edge, like wet paper.",
+        items=[Item("old helmet", "helmet", "A cracked helmet. Not from your crew.", portable=True)],
         exits={"west": "signal_cave"},
-        hidden_items=[]
+        hidden_items=[],
     )
-    
-    # Set room IDs
+
+    # --- Apply IDs and shared properties ---
     for room_id, room in rooms.items():
         room.id = room_id
-        
+        if room_id in TOXIC_ROOMS:
+            room.toxic = True
+        if room_id in HIDING_SPOTS:
+            room.hiding_spots = HIDING_SPOTS[room_id]
+
+    # Ambient sound / scanner interference
+    rooms["reactor_room"].ambient_sound = 3
+    rooms["reactor_room"].scanner_interference = True
+    rooms["cargo_bay"].ambient_sound = 2
+    rooms["galley"].ambient_sound = 1
+    for cave_id in ("signal_cave", "black_pool", "cave_mouth"):
+        rooms[cave_id].scanner_interference = True
+
+    # Vents (monster only)
+    for a, b in VENTS:
+        rooms[a].vent_exits.append(b)
+        rooms[b].vent_exits.append(a)
+
     return rooms
