@@ -13,10 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from typing import List
 from game_state import GameState, SOUND_LABELS, TOXIC_ROOMS
 
-# Words we can safely drop anywhere in a command.
-FILLER = {"the", "a", "an", "at", "to", "on", "with", "using", "into", "in",
-          "of", "off", "down"}
-# (note: "in"/"out"/"up"/"down" as standalone directions are handled before filtering)
+# Words we can safely drop from an argument. Deliberately excludes the
+# direction words (in/out/up/down) — "crawl down" and "run in" need them.
+FILLER = {"the", "a", "an", "at", "to", "on", "with", "using", "into", "of"}
 
 DIRECTIONS = {"north", "south", "east", "west", "up", "down", "in", "out"}
 

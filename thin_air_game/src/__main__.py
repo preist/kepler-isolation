@@ -203,6 +203,14 @@ class ThinAirGame:
                 self.restart()
                 return
 
+            # Sending the warning wins outright — you can't be killed on the
+            # keystroke that saves everyone. So resolve the win before the world.
+            if self.gs.win_state:
+                self.show_ending()
+                if self.prompt_again():
+                    self.restart()
+                return
+
             if self.gs.advance:
                 was_aboard = self.gs.get_flag("monster_boarded")
                 for msg in self.gs.advance_world():

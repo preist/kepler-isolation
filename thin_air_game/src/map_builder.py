@@ -25,8 +25,13 @@ HIDING_SPOTS = {
     "crew_quarters": [{"name": "under bunk", "quality": 35, "reuse": 0}],
     "cargo_bay": [{"name": "behind crates", "quality": 50, "reuse": 0}],
     "engineering_access": [{"name": "crawlspace", "quality": 40, "reuse": 0}],
+    # The reactor is a scanner-dead dead-end; cover keeps it from being a trap.
+    "reactor_room": [{"name": "behind the coolant tanks", "quality": 35, "reuse": 0}],
     "communications": [{"name": "under console", "quality": 30, "reuse": 0}],
     "storage": [{"name": "shelving", "quality": 40, "reuse": 0}],
+    # A slim, low-quality option on the final approach so a camped door is never
+    # an outright softlock — but it's a last resort, not safe cover.
+    "comms_hall": [{"name": "equipment alcove", "quality": 25, "reuse": 0}],
 }
 
 TOXIC_ROOMS = {"surface", "landing_gear", "ridge", "cave_mouth", "signal_cave", "black_pool"}

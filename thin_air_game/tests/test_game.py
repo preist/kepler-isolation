@@ -42,6 +42,17 @@ def test_unknown_command_is_graceful(game):
     assert "help" in parser.parse_command("frobnicate the whatsit").lower()
 
 
+def test_crawl_in_and_down_directions(game):
+    gs, parser = game
+    # Direction words must survive arg filtering: crawl out/down must move.
+    gs.current_room_id = "airlock"
+    parser.parse_command("crawl out")
+    assert gs.current_room_id == "surface"
+    gs.current_room_id = "cave_mouth"
+    parser.parse_command("crawl down")
+    assert gs.current_room_id == "signal_cave"
+
+
 # --------------------------------------------------------------------------- #
 # Map integrity
 # --------------------------------------------------------------------------- #

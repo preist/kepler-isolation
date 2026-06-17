@@ -260,12 +260,22 @@ class GameState:
                 and self.current_room_id == "airlock"
                 and self.get_flag("went_outside")):
             self.set_flag("returned_after_cave", True)
-            self.board_countdown = self.rng.randint(2, 3)
+            self.board_countdown = self.rng.randint(4, 6)
             msgs.append("The inner hatch cycles shut behind you.\n"
                         "Warm air. The old hum. For a moment everything is almost normal.")
 
         # Failsafe: if the player lingers on the ship a long time after the cave
         # trigger without the airlock event, the thing finds another way in.
+        # No free pacifist run: if the player lingers aboard and never triggers
+        # the cave, the thing got in some other way. Generous threshold — the
+        # intended cave trip trips boarding long before this.
+        if (not self.get_flag("cave_triggered") and not self.get_flag("monster_boarded")
+                and self.board_countdown is None and self.turn_count > 25
+                and self.current_room_id not in TOXIC_ROOMS):
+            self.set_flag("cave_triggered", True)
+            self.monster.phase = "following"
+            self.board_countdown = 2
+
         # Failsafe so the game can't stall: if the player triggers the cave but
         # somehow never returns through the airlock, the thing finds another way
         # in eventually. (In practice the airlock event above pre-empts this.)
@@ -280,8 +290,10 @@ class GameState:
         if self.board_countdown is not None and not self.get_flag("monster_boarded"):
             self.board_countdown -= 1
             if self.board_countdown <= 0:
-                # Spawn far from the player so the first encounter is fair.
-                spawn = self._distant_spawn()
+                # It came in through the airlock, behind you. Spawning at your
+                # back (not at the objective-rich stern) makes the hunt a fair
+                # chase: you move away from it toward the parts, not into it.
+                spawn = "airlock" if self.get_flag("returned_after_cave") else self._distant_spawn()
                 self.board_monster(spawn)
                 msgs.append("Far down the ship, something knocks. Once. Soft.\n\n"
                             "Then the sound is on your side of the hull.")
@@ -360,12 +372,25 @@ class GameState:
             m.state = "investigating"
             return hi
         m.state = "searching"
-        # It checks the spot it's caught you using before wandering elsewhere.
-        if m.known_hide_room and m.known_hide_room in self.rooms and self.rng.random() < 0.5:
+        # With no fresh evidence it does NOT know exactly where you are
+        # (pillar #1). It checks a spot it's caught you using, then patrols
+        # toward a goal biased to your general area — close enough to intercept,
+        # vague enough to dodge. Staying quiet keeps it guessing.
+        if m.known_hide_room and m.known_hide_room in self.rooms and self.rng.random() < 0.35:
             return m.known_hide_room
-        if m.aggression >= 2 or self.rng.random() < 0.5:
-            return self.current_room_id
-        return None
+        if (not m.target_room_id or m.target_room_id not in self.rooms
+                or m.current_room_id == m.target_room_id):
+            if self.rng.random() < 0.6:
+                m.target_room_id = self._random_room_near(self.current_room_id, 3)
+            else:
+                m.target_room_id = self.rng.choice(list(self.rooms))
+        return m.target_room_id
+
+    def _random_room_near(self, center, maxd):
+        """A random room within maxd of center (its general quadrant)."""
+        pool = [rid for rid in self.rooms
+                if rid != center and (self.shortest_path(center, rid)[0] or 99) <= maxd]
+        return self.rng.choice(pool) if pool else self.rng.choice(list(self.rooms))
 
     def _move_monster(self):
         m = self.monster
@@ -383,17 +408,10 @@ class GameState:
                     m.current_room_id = self.rng.choice(neighbors)
             return
 
-        # Speed scales with aggression: frantic late-game (two steps), but slow
-        # and distant early (every other turn) so first contact feels fair.
-        dist_to_player, _ = self.shortest_path(m.current_room_id, self.current_room_id)
+        # It always moves exactly one room per turn — same pace as you. You hold
+        # your lead by keeping moving; a backtrack, a dead-end, or a pause is
+        # what lets it close. A pure, fair pursuit.
         steps = 1
-        if m.aggression >= 3:
-            steps = 2
-        elif m.aggression <= 1 and (dist_to_player or 0) > 4:
-            if m.movement_cooldown > 0:
-                m.movement_cooldown -= 1
-                return
-            m.movement_cooldown = 1
 
         # Vents are spice, not teleportation: only when agitated, and on a cooldown.
         use_vents = (m.can_use_vents and m.vent_cooldown == 0
@@ -508,18 +526,16 @@ class GameState:
             self.death_state = "monster"
             return None  # death message printed by the main loop
 
-        # Player is hidden: roll detection. Each term is a knob the player can
-        # actually feel — noise this turn, how long the monster has been circling
-        # (searching_streak), and how worn-out this hiding spot is — offset by the
-        # spot's quality. Never 0% or 100%: stillness is never perfect safety.
+        # Player is hidden: roll detection. The first shared turn is grace — a
+        # good spot reliably survives it (hiding *works*, briefly). Danger then
+        # climbs the longer you overstay, plus noise this turn and how worn the
+        # spot is, offset by quality. Never 0% or 100%: stillness isn't safety.
         m.searching_streak += 1
         spot = self.player.hidden_spot or {"quality": 0, "reuse": 0}
-        chance = 10
-        chance += self.last_action_sound * 25
-        chance += m.searching_streak * 15
-        chance += spot.get("reuse", 0) * 12
-        chance -= spot.get("quality", 0)
-        chance = max(5, min(chance, 95))
+        overstay = max(0, m.searching_streak - 1)
+        chance = (10 + self.last_action_sound * 25 + overstay * 20
+                  + spot.get("reuse", 0) * 8 - spot.get("quality", 0))
+        chance = max(4, min(chance, 96))
         roll = self.rng.randint(1, 100)
         if roll <= chance:
             saved = self._sable_saves()
@@ -527,7 +543,11 @@ class GameState:
                 return saved
             self.death_state = "monster"
             return None
-        # A worn-out spot earns a colder near-miss: it has learned your habit.
+        # It checked and came up empty: it loses the thread and moves on, so a
+        # well-timed hide buys real escape (it doesn't camp your spot forever).
+        if m.known_hide_room == self.current_room_id:
+            m.known_hide_room = None
+        m.target_room_id = None
         if spot.get("reuse", 0) >= 2:
             return (f"It goes straight to the {spot['name']}. It is learning your habits.\n"
                     "Its attention passes over you. This time.")
