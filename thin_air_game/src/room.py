@@ -1,5 +1,5 @@
 """
-Room class for THE THIN AIR game
+Room class for KEPLER ISOLATION game
 """
 
 import sys

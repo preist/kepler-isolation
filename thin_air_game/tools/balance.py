@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Headless balance harness for THE THIN AIR.
+Headless balance harness for KEPLER ISOLATION.
 
 Drives a "careful but non-adaptive" player (quiet crawling, grabs the parts,
 makes the warning) across many RNG seeds and reports the spread of outcomes.

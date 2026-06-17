@@ -1,4 +1,4 @@
-"""Behavioural tests for THE THIN AIR.
+"""Behavioural tests for KEPLER ISOLATION.
 
 These lock in the rules that are easy to break while iterating on atmosphere:
 the parser's forgiveness, map integrity, the toxic clock, the scanner, the

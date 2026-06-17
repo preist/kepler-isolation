@@ -1,5 +1,5 @@
 """
-Item class for THE THIN AIR game
+Item class for KEPLER ISOLATION game
 """
 
 class Item:

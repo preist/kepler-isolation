@@ -1,4 +1,4 @@
-# THE THIN AIR — Roadmap to a Terminal Masterpiece
+# KEPLER ISOLATION — Roadmap to a Terminal Masterpiece
 
 > Goal: a text adventure that earns the comparison to *Alien: Isolation* — at a
 > deliberately **low resolution** of world and complexity, but a **high
@@ -62,7 +62,7 @@ same-room detection, hiding, distractions, repair → send → ending, restart.
 - [x] Add an executable **`play`** launcher at the repo root:
   ```sh
   #!/usr/bin/env bash
-  # THE THIN AIR — launcher
+  # KEPLER ISOLATION — launcher
   cd "$(dirname "$0")/thin_air_game" && exec python3 src/__main__.py
   ```
   `chmod +x play`. Document `./play` in the README as the one-liner to start.

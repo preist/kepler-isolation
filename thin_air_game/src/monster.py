@@ -1,5 +1,5 @@
 """
-Monster class for THE THIN AIR game
+Monster class for KEPLER ISOLATION game
 
 The monster is a real entity on the map. Its behaviour (pathfinding, target
 selection, detection) is driven by GameState, which has access to the room

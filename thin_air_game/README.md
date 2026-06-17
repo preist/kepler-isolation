@@ -1,4 +1,4 @@
-# THE THIN AIR
+# KEPLER ISOLATION
 
 A short terminal survival-horror text adventure. You land on a toxic planet,
 explore a cave, and return to your ship with something you didn't invite.
@@ -20,7 +20,7 @@ Requires Python 3 (standard library only). Run `./play --help` for options.
 
 Options:
 
-- `--fast` (or `THIN_AIR_FAST=1`) — skip the typewriter pacing on dramatic
+- `--fast` (or `KEPLER_FAST=1`) — skip the typewriter pacing on dramatic
   beats. Pacing is also auto-disabled for non-interactive/piped runs.
 - `--color` / `--no-color` — force or disable ANSI color (on by default for a
   terminal; `NO_COLOR` is respected).

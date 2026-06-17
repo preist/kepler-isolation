@@ -1,4 +1,4 @@
-# Contributing to THE THIN AIR
+# Contributing to KEPLER ISOLATION
 
 Small, testable steps. One logical change per commit. The game stays playable
 at every commit.

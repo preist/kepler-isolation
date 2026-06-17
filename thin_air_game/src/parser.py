@@ -1,5 +1,5 @@
 """
-Command parser for THE THIN AIR game.
+Command parser for KEPLER ISOLATION game.
 
 The parser turns a line of input into an action, mutates game state, sets the
 sound cost of the action, and flags whether the action advances time. The main

@@ -1,4 +1,4 @@
-"""Test fixtures for THE THIN AIR.
+"""Test fixtures for KEPLER ISOLATION.
 
 Builds a fully-initialized game with a *seeded* RNG so monster behaviour and
 detection rolls are deterministic.

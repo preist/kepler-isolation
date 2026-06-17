@@ -1,5 +1,5 @@
 """
-Player class for THE THIN AIR game
+Player class for KEPLER ISOLATION game
 """
 
 import sys

@@ -1,5 +1,5 @@
 """
-Save / load for THE THIN AIR.
+Save / load for KEPLER ISOLATION.
 
 The map's *static* structure (exits, vents, hazards, descriptions) is rebuilt
 from map_builder on load — we only persist the things that actually change

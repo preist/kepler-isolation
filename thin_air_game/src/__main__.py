@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-THE THIN AIR - a terminal survival-horror text adventure.
+KEPLER ISOLATION - a terminal survival-horror text adventure.
 
 Run:  python3 src/__main__.py
 """
@@ -38,7 +38,7 @@ class ThinAirGame:
         # Typewriter pacing is for atmosphere only: skip it for --fast, when the
         # env var is set, or when input/output isn't a real terminal (piped runs,
         # tests). That keeps scripted play and CI snappy and clean.
-        fast_flag = "--fast" in sys.argv or os.environ.get("THIN_AIR_FAST")
+        fast_flag = "--fast" in sys.argv or os.environ.get("KEPLER_FAST")
         self.interactive = sys.stdin.isatty() and sys.stdout.isatty()
         self.paced = self.interactive and not fast_flag
         # Color is on for a real terminal by default; --color forces it,
@@ -90,29 +90,39 @@ class ThinAirGame:
 
     def intro(self):
         print()
-        print("T H E   T H I N   A I R")
+        print("K E P L E R   I S O L A T I O N")
         print(RULE)
-        print("Survey lander LANTERN-9. Contract: Farland-Guttenber Recovery & Survey.")
+        print("Survey lander LANTERN-9. Contract: Halloway-Tanaka Industries.")
         print()
-        print("Landing complete.")
-        print("Atmosphere: lethal.")
-        print("Signal source: local.")
-        print("Crew status: one.")
+        print("You wake on the ground. You do not remember the landing.")
+        print()
+        print("  Landing complete.")
+        print("  Atmosphere: lethal.")
+        print("  Signal source: local. Origin: below.")
+        print("  Crew status: one.")
+        print("  Crew status (revised): one.")
+        print()
+        print("The signal is old. It has not degraded. That should not be possible.")
         print(RULE)
         print()
 
+    # Fixed personnel — one face per role. (All male, per the manifest.)
+    ROLES = {
+        "1": ("Elias Cole", "human"),
+        "2": ("Jonah Crane", "synthetic"),
+        "3": ("Rourke Dunmore", "contract_specialist"),
+    }
+
     def create_character(self):
-        name = input("Name? > ").strip() or "Crew"
-        gender = input("Gender? > ").strip() or "unspecified"
-        print("Type?")
-        print("  1. Human crewmember")
-        print("  2. Synthetic")
-        print("  3. Contract specialist")
+        print("HALLOWAY-TANAKA PERSONNEL — assign role:")
+        print("  1. Crew        — Elias Cole")
+        print("  2. Synthetic   — Jonah Crane")
+        print("  3. Contractor  — Rourke Dunmore")
         choice = input("> ").strip()
-        ptype = {"2": "synthetic", "3": "contract_specialist"}.get(choice, "human")
-        self.gs.player = Player(name, gender, ptype)
-        label = ptype.replace("_", " ")
-        print(f"\nWelcome aboard, {name}. ({label})")
+        name, ptype = self.ROLES.get(choice, self.ROLES["1"])
+        self.gs.player = Player(name, "male", ptype)
+        label = ptype.replace("_", " ").title()
+        print(f"\n{name}. {label}. The manifest lists him, and no one else.")
         print("Type 'help' at any time.\n")
 
     def setup_world(self):
@@ -256,7 +266,7 @@ class ThinAirGame:
         print()
         self.say(self.c("> DO NOT COME HERE.", "1;36"), slow=True)
         print()
-        print("FARLAND-GUTTENBER RELAY STATION")
+        print("HALLOWAY-TANAKA RELAY STATION")
         print("SEVENTEEN DAYS LATER")
         print()
         for line in ('  "Play it again."',
@@ -297,7 +307,7 @@ class ThinAirGame:
         game.main_loop()
 
 
-USAGE = """THE THIN AIR — a terminal survival-horror text adventure.
+USAGE = """KEPLER ISOLATION — a terminal survival-horror text adventure.
 
   You land on a toxic planet, explore a cave, and come back with a passenger.
   Reach Communications, repair the transmitter, and send the warning.

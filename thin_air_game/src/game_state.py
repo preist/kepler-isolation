@@ -1,5 +1,5 @@
 """
-Game state and world simulation for THE THIN AIR game.
+Game state and world simulation for KEPLER ISOLATION game.
 
 GameState holds everything (player, rooms, monster, flags) and owns the
 "advance the world one turn" logic: sound propagation, monster AI, the toxic
@@ -35,12 +35,16 @@ NEAR_SIGNS = [
     "Somewhere close, metal flexes and settles.",
     "A wet sound, then nothing.",
     "The lights stutter, then hold.",
+    "The air goes warm and close, the way breath does.",
+    "Something is breathing in time with you. You stop. It does not.",
+    "A smell finds you first. Old water. Something underneath it.",
 ]
 HUNT_SIGNS = [
     "Footfalls. Fast, then nothing. It knows where you were.",
     "A hatch slams shut two rooms over.",
     "The lights drop to red and stay there.",
     "Metal shrieks, closing the distance.",
+    "It is not trying to be quiet anymore.",
 ]
 
 

@@ -1,5 +1,5 @@
 """
-Map builder for THE THIN AIR game.
+Map builder for KEPLER ISOLATION game.
 Creates and initializes all rooms with their exits, items, hazards, vents,
 hiding spots, and sound/scanner properties.
 """
@@ -44,7 +44,8 @@ def create_rooms():
     # --- Ship ---
     rooms["cockpit"] = Room(
         name="Cockpit",
-        description="Dead stars in the glass. The console waits with one green light.",
+        description="Dead stars in the glass. The console waits with one green light.\n"
+                    "Your descent-sleep pod is still warm. You don't recall closing it.",
         items=[Item("hand terminal", "terminal,scanner", "A rugged motion scanner. It reads direction and distance.", portable=True)],
         exits={"south": "central_corridor"},
         hidden_items=[],
