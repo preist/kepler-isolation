@@ -199,13 +199,20 @@ class GameState:
         # 3. Monster simulation (only once truly aboard)
         if self.monster.active and self.monster.phase == "aboard":
             self.monster.update_suspicion_decay()
+            if self.monster.vent_cooldown > 0:
+                self.monster.vent_cooldown -= 1
             self._apply_sound_to_monster()
             self._update_aggression()
             self._move_monster()
             self._update_scanner()
-            sign = self._maybe_telegraph()
-            if sign:
-                msgs.append(sign)
+            # A vent move announces itself — the peeled grille is the tell.
+            if self.monster.used_vent_last_move:
+                self.monster.used_vent_last_move = False
+                msgs.append("A grille shrieks somewhere close. Peeled open from inside.")
+            else:
+                sign = self._maybe_telegraph()
+                if sign:
+                    msgs.append(sign)
             death = self._resolve_same_room()
             if death:
                 msgs.append(death)
@@ -328,6 +335,11 @@ class GameState:
         # suspicion, which beats a blind drift toward the player. The drift is
         # intentionally partial (see below) so the player gets breathing room.
         m = self.monster
+        # Endgame: once the transmitter is live it camps the objective — the
+        # send is meant to be a knife-edge, not a victory lap.
+        if self.game_phase == "final_repair":
+            m.state = "hunting"
+            return "communications"
         if m.last_heard_room_id and m.turns_since_heard <= 2:
             m.state = "hunting"
             return m.last_heard_room_id
@@ -371,7 +383,9 @@ class GameState:
                 return
             m.movement_cooldown = 1
 
-        use_vents = m.can_use_vents and (m.aggression >= 2 or self.last_action_sound >= 3)
+        # Vents are spice, not teleportation: only when agitated, and on a cooldown.
+        use_vents = (m.can_use_vents and m.vent_cooldown == 0
+                     and (m.aggression >= 2 or self.last_action_sound >= 3))
         for _ in range(steps):
             if m.current_room_id == target:
                 break
@@ -384,10 +398,12 @@ class GameState:
         m = self.monster
         room = self.rooms[m.current_room_id]
         if direction == "vent":
-            # Vents are not direction-keyed; pick the vent dest that reduces
-            # distance to the current target.
+            # Vents are not direction-keyed; take the first one and pay the
+            # cooldown so the next moves are back on foot.
             for dest in room.vent_exits:
                 m.current_room_id = dest
+                m.used_vent_last_move = True
+                m.vent_cooldown = 3
                 return
         dest = room.exits.get(direction)
         if dest:

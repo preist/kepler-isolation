@@ -167,6 +167,15 @@ def test_monster_boards_after_cave_return(game):
 # --------------------------------------------------------------------------- #
 # Win gate
 # --------------------------------------------------------------------------- #
+def test_final_repair_camps_communications(game):
+    gs, _ = game
+    gs.monster.active = True
+    gs.monster.phase = "aboard"
+    gs.monster.current_room_id = "cargo_bay"
+    gs.game_phase = "final_repair"
+    assert gs._choose_target() == "communications"
+
+
 def test_distraction_fatigue(game):
     gs, parser = game
     gs.monster.active = True
