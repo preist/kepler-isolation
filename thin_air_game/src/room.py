@@ -17,6 +17,9 @@ class Room:
         self.items = items
         self.exits = exits  # direction -> room_id
         self.hidden_items = hidden_items
+        # State-keyed description variants, e.g. {"aboard": "...", "triggered": "..."}.
+        # describe() swaps these in so the ship can change under the player.
+        self.variants = {}
 
         # Room properties
         self.hazards = []
@@ -29,6 +32,16 @@ class Room:
         self.scanner_interference = False  # scanner is unreliable here
         self.ambient_sound = 0            # 0 silent .. 3 loud; masks/echoes player sound
         self.visited = False
+
+    def describe(self, game_state) -> str:
+        """Return the description for the current world state. Most dramatic
+        variant wins: a boarded monster reframes the room over the mere fact
+        that the cave was triggered."""
+        if game_state.get_flag("monster_boarded") and "aboard" in self.variants:
+            return self.variants["aboard"]
+        if game_state.get_flag("cave_triggered") and "triggered" in self.variants:
+            return self.variants["triggered"]
+        return self.description
 
     def add_exit(self, direction: str, room_id: str):
         self.exits[direction] = room_id

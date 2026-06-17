@@ -218,6 +218,47 @@ def create_rooms():
     for cave_id in ("signal_cave", "black_pool", "cave_mouth"):
         rooms[cave_id].scanner_interference = True
 
+    # --- Dread pass: how each room reads once the creature is aboard ---
+    # The trick is repetition-with-variation: a familiar detail, changed.
+    aboard = {
+        "cockpit": "Dead stars in the glass. The one green light still waits.\n"
+                   "Your own reflection sits in the chair behind you. You are standing.",
+        "central_corridor": "The lights hum in pairs. One pair has gone dark.\n"
+                            "The old boot marks lead somewhere they didn't before.",
+        "airlock": "Inner hatch, outer hatch. The outer seal is scored from the\n"
+                   "outside. The red card still reads: TWO MOVES WITHOUT SEAL.",
+        "med_bay": "Supplies behind cracked glass. The recorder log lies untouched.\n"
+                   "The cabinet door hangs open. You did not open it.",
+        "crew_quarters": "Bunks and lockers. The smell of old coffee is gone.\n"
+                         "Something low and animal has taken its place.",
+        "galley": "The cans are scattered wider now. A few are flattened,\n"
+                  "as if something heavy passed without caring.",
+        "storage": "Boxes shoved aside. A path cleared through them, low to the\n"
+                   "floor, the width of a body that does not walk upright.",
+        "engineering_access": "The narrow passage. The open panel over the\n"
+                              "crawlspace gapes wider than you left it.",
+        "reactor_room": "The reactor roars with heat. Good — the noise hides you.\n"
+                        "The noise hides it, too.",
+        "cargo_bay": "Tall crates, the dead forklift, the pooling dark.\n"
+                     "The dark is arranged differently than before.",
+        "lower_hold": "A dead end. The scratch marks are fresh now, and wet,\n"
+                      "and they go higher up the wall than your reach.",
+        "maintenance_junction": "The junction of tunnels. One vent grille has been\n"
+                               "peeled outward from inside. Petals of bright metal.",
+        "ventral_service": "The fan has stopped. In the new quiet you can hear it\n"
+                           "move through the ducts. Unhurried.",
+        "observation": "The long window holds the planet's dark face.\n"
+                       "Twice now, something has crossed it — on the inside of the glass.",
+        "comms_hall": "The final approach. The equipment lights flicker in sequence,\n"
+                      "as if something keeps brushing the wall. The air is watched.",
+        "communications": "A dead microphone. The transmitter, three sockets open.\n"
+                          "Behind you, the corridor breathes.",
+        "landing_gear": "The bent strut. Fresh slime threads the metal — a trail\n"
+                        "leading up the hull, toward the airlock. Toward inside.",
+    }
+    for room_id, text in aboard.items():
+        rooms[room_id].variants["aboard"] = text
+
     # Vents (monster only)
     for a, b in VENTS:
         rooms[a].vent_exits.append(b)

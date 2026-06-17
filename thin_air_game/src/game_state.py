@@ -240,7 +240,8 @@ class GameState:
                 and self.get_flag("went_outside")):
             self.set_flag("returned_after_cave", True)
             self.board_countdown = self.rng.randint(2, 3)
-            msgs.append("The inner hatch seals behind you. The ship is warm and quiet.")
+            msgs.append("The inner hatch cycles shut behind you.\n"
+                        "Warm air. The old hum. For a moment everything is almost normal.")
 
         # Failsafe: if the player lingers on the ship a long time after the cave
         # trigger without the airlock event, the thing finds another way in.
@@ -261,7 +262,8 @@ class GameState:
                 # Spawn far from the player so the first encounter is fair.
                 spawn = self._distant_spawn()
                 self.board_monster(spawn)
-                msgs.append("Somewhere aft, something soft knocks once.\nThen it is inside.")
+                msgs.append("Far down the ship, something knocks. Once. Soft.\n\n"
+                            "Then the sound is on your side of the hull.")
         # Count turns since "seen" grows while dormant (used by failsafe).
         if not self.get_flag("monster_boarded"):
             self.monster.turns_since_seen += 1

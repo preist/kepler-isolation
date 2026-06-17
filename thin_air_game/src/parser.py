@@ -179,7 +179,7 @@ class Parser:
     def handle_look(self) -> str:
         self._meta()
         room = self.game_state.current_room
-        out = [room.name, room.description]
+        out = [room.name, room.describe(self.game_state)]
         if room.exits:
             out.append("Exits: " + ", ".join(room.exits.keys()))
         if room.items:
@@ -223,16 +223,30 @@ class Parser:
 
     def handle_listen(self) -> str:
         self._act(0)
-        m = self.game_state.monster
+        gs = self.game_state
+        m = gs.monster
         if m.active and m.phase == "aboard":
-            dist, _ = self.game_state.shortest_path(self.game_state.current_room_id,
-                                                    m.current_room_id)
+            dist, _ = gs.shortest_path(gs.current_room_id, m.current_room_id)
             if dist == 0:
                 return "Breathing. Not yours."
             if dist is not None and dist <= 2:
-                return "Something moves nearby. Close."
-            return "Distant sounds. The ship settling. Maybe."
-        return "Only the hum of the ship."
+                return "Something moves nearby. Close, and in no hurry."
+            return "The ship settling. Maybe. You decide to believe that."
+        if gs.current_room_id in TOXIC_ROOMS:
+            return gs.rng.choice([
+                "Wind over the dust. Your own breath, loud in the helmet.",
+                "The signal, under everything. Not a voice. Almost a voice.",
+            ])
+        if gs.get_flag("cave_triggered"):
+            return gs.rng.choice([
+                "The hum of the ship. And under it, something you can't place.",
+                "Quiet. The kind that arrives after a sound, not before one.",
+            ])
+        return gs.rng.choice([
+            "Only the hum of the ship. Pairs of lights, ticking warm.",
+            "A drip, somewhere. The recyclers. Probably the recyclers.",
+            "Nothing. The good kind, for now.",
+        ])
 
     # ------------------------------------------------------------------ #
     # Inventory / items

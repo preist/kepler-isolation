@@ -107,7 +107,7 @@ class ThinAirGame:
         print()
         print(self.status_line())
         print()
-        print(room.description)
+        print(room.describe(self.gs))
         print()
         print("Exits: " + (", ".join(room.exits.keys()) if room.exits else "none"))
         if room.items:
