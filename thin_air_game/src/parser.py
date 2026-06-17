@@ -597,10 +597,21 @@ class Parser:
 
     def handle_map(self) -> str:
         self._meta()
-        visited = [r.name for r in self.game_state.rooms.values() if r.visited]
+        rooms = self.game_state.rooms
+        visited = [r for r in rooms.values() if r.visited]
         if not visited:
             return "You have not explored anywhere yet."
-        return "Known rooms:\n" + "\n".join(f"  - {n}" for n in visited)
+        width = max(len(r.name) for r in visited)
+        lines = ["Known rooms (only exits you've walked are shown):"]
+        for room in visited:
+            conns = []
+            for direction, dest in room.exits.items():
+                # Don't spoil rooms you haven't entered yet.
+                label = rooms[dest].name if rooms[dest].visited else "?"
+                conns.append(f"{direction}->{label}")
+            here = "*" if room.id == self.game_state.current_room_id else " "
+            lines.append(f" {here}{room.name.ljust(width)}  " + "  ".join(conns))
+        return "\n".join(lines)
 
     def handle_help(self) -> str:
         self._meta()
