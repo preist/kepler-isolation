@@ -160,25 +160,25 @@ learned what I was doing." Scanner can lie/lag without ever feeling unfair.
 
 ---
 
-### Phase 3 — **Polish & Persistence** (v1.3)
+### Phase 3 — **Polish & Persistence** (v1.3) — ✅ DONE
 *The finish coat.*
 
-- [ ] **Save / load** (single JSON snapshot of GameState; `save`/`load`
+- [x] **Save / load** (single JSON snapshot of GameState; `save`/`load`
   commands). Enables longer sessions and recovery.
-- [ ] **Optional ANSI color**, behind a `--color` flag / `NO_COLOR` respect:
+- [x] **Optional ANSI color**, behind a `--color` flag / `NO_COLOR` respect:
   red for toxic warnings, dim for ambient, a single accent for the scanner.
   Restrained — pillar #7. Never rainbow.
-- [ ] **ASCII map** command upgrade: show visited rooms in a small connected
+- [x] **ASCII map** command upgrade: show visited rooms in a small connected
   layout, not just a list. Never reveal unvisited rooms.
-- [ ] **Balance pass / full playtest** to the 30-minute target:
+- [x] **Balance pass / full playtest** to the 30-minute target:
   - Tune `board_countdown`, aggression curve, and the detection formula so the
     cave path is winnable with careful play but punishes the careless.
   - Verify no softlocks (e.g. creature permanently camping the only door — confirm
     distraction counterplay always exists).
   - First-timers die 1–2 times; a careful second run wins.
-- [ ] **Docs:** finalize README (commands, install, spoiler-free intro), a short
+- [x] **Docs:** finalize README (commands, install, spoiler-free intro), a short
   CONTRIBUTING note, and a `--help` CLI flag.
-- [ ] **Ending polish:** tighten the relay-station sting; ensure the tragedy
+- [x] **Ending polish:** tighten the relay-station sting; ensure the tragedy
   (the warning *invites* them) reads cold and clean.
 
 **Phase 3 DoD:** a stranger can `./play`, finish in ~30 min, and the ending
