@@ -18,6 +18,9 @@ python3 src/__main__.py
 
 Requires Python 3 (standard library only).
 
+Add `--fast` (or set `THIN_AIR_FAST=1`) to skip the typewriter pacing on
+dramatic beats. Pacing is also auto-disabled for non-interactive/piped runs.
+
 ## How to play
 
 You wake in the **Cockpit**. Goal: reach **Communications**, install the three
