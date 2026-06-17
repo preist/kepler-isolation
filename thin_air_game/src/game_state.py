@@ -2,6 +2,15 @@
 Game state class for THE THIN AIR game
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from player import Player
+from room import Room
+from item import Item
+from monster import Monster
+
 class GameState:
     def __init__(self):
         self.player = None
@@ -59,15 +68,15 @@ class GameState:
     def increment_turn(self):
         self.turn_count += 1
         
-    def add_to_message_log(self, message: str):
-        self.message_log.append(message)
+        # Update monster suspicion decay
+        if self.monster and self.monster.active:
+            self.monster.update_suspicion_decay()
         
-    def get_room_by_id(self, room_id: str) -> object:
+    def get_room(self, room_id: str) -> object:
         return self.rooms.get(room_id)
         
-    def initialize_monster(self):
-        from .monster import Monster
-        self.monster = Monster()
-        self.monster.current_room_id = "airlock"  # Start in airlock
-        self.monster.set_active(False)
-        self.monster.set_phase("dormant")
+    def add_message(self, message: str):
+        self.message_log.append(message)
+        
+    def clear_messages(self):
+        self.message_log.clear()

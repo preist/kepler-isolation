@@ -4,15 +4,19 @@ THE THIN AIR - Terminal-based text adventure game
 """
 
 import sys
+import os
 from typing import Dict, List, Optional
 
+# Add the current directory to Python path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 # Game components
-from .game_state import GameState
-from .player import Player
-from .room import Room
-from .item import Item
-from .monster import Monster
-from .parser import Parser
+from game_state import GameState
+from player import Player
+from room import Room
+from item import Item
+from monster import Monster
+from parser import Parser
 
 
 class ThinAirGame:

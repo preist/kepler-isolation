@@ -2,6 +2,11 @@
 Room class for THE THIN AIR game
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from item import Item
 class Room:
     def __init__(self, name: str, description: str, items: list, exits: dict, hidden_items: list):
         self.id = None  # Will be set by game state

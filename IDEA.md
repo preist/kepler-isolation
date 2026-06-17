@@ -14,7 +14,7 @@ Build **THE THIN AIR**: a complete, polished, playable terminal text adventure g
 
 ## CRITICAL SUCCESS FACTORS
 
-1. **Terminal UI is first-class** - Use clean formatting, clear status lines, readable descriptions. This is more important than feature completeness. Players should feel like they're using a modern CLI tool, not a 1980s game.
+1. **Terminal UI is first-class** - Use clean formatting, clear status lines, readable descriptions. This is more important than feature completeness. The interface should feel **polished and modern** like a well-designed CLI (think: modern Zork, not retro). Every interaction should be smooth, responsive, and comfortable. Players should feel they're using a professionally-made tool, not cobbled together code.
 
 2. **200+ iterations with git commits** - **This is non-negotiable.** Work in small cycles and commit after each iteration:
    - Fix one thing, test it, commit (one commit)
@@ -32,12 +32,15 @@ Build **THE THIN AIR**: a complete, polished, playable terminal text adventure g
    - Can hiding feel fair but desperate?
    - How should the monster's presence be telegraphed subtly?
 
-4. **Complete and documented** - By the end:
+4. **Complete, polished, and documented** - By the end:
    - Fully playable from start to win/death
    - In-game help system with clear affordances
-   - README explaining how to play
-   - Code that's clean and commented where needed
+   - README explaining how to play and install
+   - Clean, well-commented code
    - 200+ commits showing iterative progress
+   - **Polish**: The interface should feel modern and smooth, like a well-made CLI tool. Not clunky 1980s parser. Think: modern Zork with clean formatting, readable status bars, helpful error messages.
+   - **Documentation**: Specs clear in comments, command aliases intuitive, help command useful, no guessing required
+   - **Interface**: Simple but comfortable. Clean status line. Readable room descriptions. Obvious exits. No visual clutter.
 
 ---
 
@@ -82,16 +85,39 @@ Build **THE THIN AIR**: a complete, polished, playable terminal text adventure g
 
 ---
 
+## INTERFACE POLISH: MODERN ZORK FEEL
+
+The terminal UI should feel **polished and modern**, like a well-designed CLI tool—not like 1980s Zork:
+
+**What this means:**
+- Clean status line with clear information (Location | Sound | Suit | Motion)
+- Room descriptions readable and terse (3-4 lines max)
+- Exits always visible and clearly formatted
+- Items listed simply without clutter
+- Error messages helpful, not cryptic ("You see no north exit here." not "You can't go that way, friend.")
+- Commands are forgiving (multiple aliases, smart parsing, no punishment for typos)
+- Help system is actually useful
+- The whole game feels *responsive and smooth*
+
+**What this doesn't mean:**
+- No ASCII art or box drawing for decoration
+- No rainbow colors or fancy effects
+- Not trying to be graphical
+- Just: clean, readable, professional, comfortable to use
+
+This takes iteration. Polish comes from testing small improvements repeatedly.
+
 ## WHY 200+ ITERATIONS?
 
 Small, committed steps compound into polish. A game built in 200 small iterations will have:
-- Better thought-out UI (each interaction tuned)
+- Better thought-out UI (each interaction tuned incrementally)
 - Fewer bugs (testing after every change)
 - Clearer codebase (small changes, not monolithic rewrites)
 - Visible progress history (200 commits = proof of work)
-- Better game feel (iterative refinement, not one-shot implementation)
+- Better game feel (iterative refinement creates polish, one-shot doesn't)
+- Professional documentation and help built gradually, not bolted on at the end
 
-**200 iterations is not excessive. It's the difference between "works" and "feels good."**
+**200 iterations is not excessive. It's the difference between "works" and "feels like a modern, polished tool."**
 
 ## YOU HAVE CREATIVE FREEDOM
 
@@ -101,6 +127,7 @@ Change anything in this spec if the game will be better for it:
 - Simplify monster behavior if it's clearer
 - Add flavor text where it helps
 - Remove features if they clutter the experience
+- **As you polish over 200 iterations, consider adding optional enhancements: basic terminal colors (danger red for toxic air, monster proximity highlighting, scanner state colors), subtle sound effects (beeps, hisses, distant noises via system bell or sound library), or gentle animations (blinking status lines, scanner pulses, text effects).** These should emerge naturally as polish—not forced early. The goal is to make the game feel *more alive and responsive*, never cluttered. Decide what serves the mood. By iteration 200, the interface can be even more sophisticated than this spec suggests.
 
 The goal is a **sharp, focused, genuinely good game** — not blind adherence to a spec.
 

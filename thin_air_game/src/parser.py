@@ -2,11 +2,15 @@
 Parser class for THE THIN AIR game
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from typing import List, Tuple, Optional
-from .game_state import GameState
-from .player import Player
-from .room import Room
-from .item import Item
+from game_state import GameState
+from player import Player
+from room import Room
+from item import Item
 
 
 class Parser:

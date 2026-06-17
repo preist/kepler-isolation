@@ -2,25 +2,25 @@
 Monster class for THE THIN AIR game
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from room import Room
 class Monster:
     def __init__(self):
         self.active = False
-        self.phase = "dormant"  # dormant, following, aboard, hunting, searching, investigating, same_room, attacking, feeding
-        
-        # Position and movement
+        self.phase = "dormant"  # dormant, following, aboard, hunting, investigating, searching, same_room, attacking, feeding
         self.current_room_id = None
+        self.state = "dormant"
         self.target_room_id = None
         self.last_heard_room_id = None
         self.last_seen_room_id = None
-        
-        # Behavior tracking
-        self.suspicion_by_room = {}  # room_id -> suspicion_score
+        self.suspicion_by_room = {}
         self.turns_since_seen = 0
         self.turns_since_heard = 0
         self.movement_cooldown = 0
-        self.aggression = 0  # 0-10 scale
-        
-        # Memory
+        self.aggression = 0
         self.rooms_checked_recently = []
         self.known_hiding_spots = {}
         self.distracted_until_turn = 0
@@ -31,6 +31,9 @@ class Monster:
         
     def set_phase(self, phase: str):
         self.phase = phase
+        
+    def set_state(self, state: str):
+        self.state = state
         
     def add_suspicion(self, room_id: str, amount: int):
         if room_id not in self.suspicion_by_room:
@@ -45,23 +48,14 @@ class Monster:
     def clear_suspicion(self):
         self.suspicion_by_room.clear()
         
-    def get_target_room(self, player_room_id: str, game_state):
-        # Priority:
-        # 1. If violent/loud sound recently heard: target that room
-        # 2. If saw player: target player room
-        # 3. Highest suspicion room
-        # 4. Patrol route
+    def update_suspicion_decay(self):
+        for room_id in list(self.suspicion_by_room.keys()):
+            self.suspicion_by_room[room_id] = max(0, self.suspicion_by_room[room_id] - 1)
+            if self.suspicion_by_room[room_id] <= 0:
+                del self.suspicion_by_room[room_id]
         
-        if self.last_heard_room_id and self.turns_since_heard < 5:
-            return self.last_heard_room_id
+    def is_distracted(self, current_turn: int) -> bool:
+        return current_turn < self.distracted_until_turn
         
-        if self.last_seen_room_id:
-            return self.last_seen_room_id
-        
-        # Check highest suspicion room
-        highest_suspicion = self.get_highest_suspicion_room()
-        if highest_suspicion:
-            return highest_suspicion
-        
-        # Default to patrol (for now, just return player room)
-        return player_room_id
+    def set_distracted(self, until_turn: int):
+        self.distracted_until_turn = until_turn

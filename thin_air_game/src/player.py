@@ -2,6 +2,11 @@
 Player class for THE THIN AIR game
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from item import Item
 class Player:
     def __init__(self, name: str, gender: str, player_type: str):
         self.name = name
