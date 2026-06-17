@@ -120,6 +120,33 @@ def test_scan_here_when_same_room(game):
     assert "here" in parser.parse_command("scan").lower()
 
 
+def test_scan_uses_lagged_belief(game):
+    gs, parser = game
+    gs.player.has_terminal = True
+    gs.monster.active = True
+    gs.monster.phase = "aboard"
+    gs.monster.turns_since_seen = 99
+    gs.current_room_id = "cockpit"
+    # Truth says reactor_room, but the scanner still believes communications.
+    gs.monster.current_room_id = "reactor_room"
+    gs.monster.tracked_room_id = "communications"
+    _, true_dir = gs.shortest_path("cockpit", "reactor_room")
+    _, belief_dir = gs.shortest_path("cockpit", "communications")
+    out = parser.parse_command("scan")
+    assert f"MOTION: {belief_dir}" in out  # reports the belief, not the truth
+
+
+def test_scan_reports_seen_after_same_room(game):
+    gs, parser = game
+    gs.player.has_terminal = True
+    gs.monster.active = True
+    gs.monster.phase = "aboard"
+    gs.monster.turns_since_seen = 0
+    gs.current_room_id = "cockpit"
+    gs.monster.current_room_id = "central_corridor"
+    assert "looking at you" in parser.parse_command("scan").lower()
+
+
 # --------------------------------------------------------------------------- #
 # Boarding
 # --------------------------------------------------------------------------- #

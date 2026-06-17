@@ -33,6 +33,17 @@ class Monster:
         # player stayed hidden (escalates detection)
         self.searching_streak = 0
 
+        # --- Phase 2: the intelligence ---
+        # What the scanner currently *believes* — lagged/imperfect, not ground truth.
+        self.tracked_room_id = None
+        # Times the player has lured it with a thrown distraction; it wises up.
+        self.distraction_uses = 0
+        # A hiding spot it has caught the player using; it checks there first.
+        self.known_hide_room = None
+        # Rate-limit vent shortcuts so they stay spice, not teleportation.
+        self.vent_cooldown = 0
+        self.used_vent_last_move = False
+
     def add_suspicion(self, room_id: str, amount: int):
         if not room_id:
             return

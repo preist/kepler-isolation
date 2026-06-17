@@ -163,6 +163,7 @@ class GameState:
         m.phase = "aboard"
         m.state = "searching"
         m.current_room_id = spawn_id
+        m.tracked_room_id = spawn_id
         m.can_use_vents = True
         m.aggression = 1
         self.set_flag("monster_boarded", True)
@@ -201,6 +202,7 @@ class GameState:
             self._apply_sound_to_monster()
             self._update_aggression()
             self._move_monster()
+            self._update_scanner()
             sign = self._maybe_telegraph()
             if sign:
                 msgs.append(sign)
@@ -397,6 +399,23 @@ class GameState:
             return self.rng.choice(NEAR_SIGNS)
         return None
 
+    def _update_scanner(self):
+        """The scanner is useful but never perfect (design pillar #1). It lags,
+        and it flickers when the creature is close or near interference — so a
+        reading can be a turn stale, which is exactly where dread lives."""
+        m = self.monster
+        if self.current_room.scanner_interference:
+            return  # handle_scan reports "scrambled"; leave the belief stale
+        dist, _ = self.shortest_path(self.current_room_id, m.current_room_id)
+        fresh = 0.85
+        if dist is not None and dist <= 1:
+            fresh = 0.5                      # the signal panics when it's on top of you
+        if self.player.type == "synthetic":
+            fresh = min(1.0, fresh + 0.15)   # crisper optics
+        if self.rng.random() < fresh:
+            m.tracked_room_id = m.current_room_id
+        # else: keep the previous belief — a one-turn lie.
+
     def _resolve_same_room(self):
         """The monster is in the player's room. Decide what happens."""
         m = self.monster
@@ -404,6 +423,9 @@ class GameState:
             m.searching_streak = 0
             return None
 
+        # It is in the room. Whatever happens next, it now knows you are near —
+        # that memory powers the scanner's "it is already looking at you".
+        m.turns_since_seen = 0
         m.last_seen_room_id = self.current_room_id
 
         # Distraction (a thrown object) buys one pass.

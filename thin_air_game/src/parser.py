@@ -377,25 +377,33 @@ class Parser:
             self._meta()
             return "You have no scanner. (Find the hand terminal.)"
         self._act(1)
-        m = self.game_state.monster
+        gs = self.game_state
+        m = gs.monster
 
         if not m.active:
-            if self.game_state.get_flag("cave_triggered"):
+            if gs.get_flag("cave_triggered"):
                 return "MOTION: outside\nDISTANCE: uncertain\nSIGNAL: intermittent"
             return "No internal motion detected."
 
-        room = self.game_state.current_room
+        # It has recently had you in its room: the gut-punch.
+        if m.turns_since_seen <= 1:
+            return "You lift the terminal.\n\nIt is already looking at you."
+
+        room = gs.current_room
         if room.scanner_interference:
             return "MOTION: interference\nDISTANCE: unknown\nSIGNAL: scrambled"
 
-        if m.current_room_id == self.game_state.current_room_id:
+        # Read the scanner's *belief*, not the truth — it can be a turn stale.
+        tracked = m.tracked_room_id or m.current_room_id
+        if tracked == gs.current_room_id:
             return "MOTION: here\nDISTANCE: 0\nSIGNAL: inside the room"
 
-        dist, direction = self.game_state.shortest_path(
-            self.game_state.current_room_id, m.current_room_id)
+        dist, direction = gs.shortest_path(gs.current_room_id, tracked)
         if dist is None:
             return "MOTION: none\nDISTANCE: ---\nSIGNAL: lost"
-        # Synthetics get a crisper read.
+        # Up close the signal sometimes ghosts out entirely.
+        if dist <= 1 and gs.rng.random() < 0.25:
+            return "MOTION: ---\nDISTANCE: signal lost\nSIGNAL: ghosting"
         signal = "strong" if dist <= 2 else "intermittent"
         moves = "1 move" if dist == 1 else f"{dist} moves"
         return f"MOTION: {direction}\nDISTANCE: {moves}\nSIGNAL: {signal}"

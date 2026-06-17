@@ -123,9 +123,12 @@ class ThinAirGame:
             return "outside" if self.gs.get_flag("cave_triggered") else "none"
         if self.gs.current_room.scanner_interference:
             return "interference"
-        if m.current_room_id == self.gs.current_room_id:
+        if m.turns_since_seen <= 1:
+            return "SEEN"
+        tracked = m.tracked_room_id or m.current_room_id
+        if tracked == self.gs.current_room_id:
             return "HERE"
-        dist, direction = self.gs.shortest_path(self.gs.current_room_id, m.current_room_id)
+        dist, direction = self.gs.shortest_path(self.gs.current_room_id, tracked)
         if dist is None:
             return "lost"
         return f"{direction} {dist}"
