@@ -42,7 +42,7 @@ cd kepler-isolation
 ```sh
 git clone https://github.com/preist/kepler-isolation.git
 cd kepler-isolation
-python thin_air_game\src\__main__.py
+python kepler_isolation\src\__main__.py
 ```
 
 That's it. Type `help` at any time in the game.
@@ -131,12 +131,12 @@ You can `save` and `load` a single game in progress from inside the game.
 ## For the curious
 
 The full design notes and roadmap live in
-[`thin_air_game/ROADMAP.md`](thin_air_game/ROADMAP.md), and contributor notes in
-[`thin_air_game/CONTRIBUTING.md`](thin_air_game/CONTRIBUTING.md). To run the test
+[`kepler_isolation/ROADMAP.md`](kepler_isolation/ROADMAP.md), and contributor notes in
+[`kepler_isolation/CONTRIBUTING.md`](kepler_isolation/CONTRIBUTING.md). To run the test
 suite:
 
 ```sh
-python3 -m pytest thin_air_game/tests/
+python3 -m pytest kepler_isolation/tests/
 ```
 
 Built as a focused, terse, lethal little knife of a game. Good luck. Stay quiet.

@@ -4,4 +4,4 @@ __pycache__/
 .DS_Store
 .pytest_cache/
 savegame.json
-thin_air_game/savegame.json
+kepler_isolation/savegame.json

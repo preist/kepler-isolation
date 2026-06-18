@@ -63,7 +63,7 @@ same-room detection, hiding, distractions, repair → send → ending, restart.
   ```sh
   #!/usr/bin/env bash
   # KEPLER ISOLATION — launcher
-  cd "$(dirname "$0")/thin_air_game" && exec python3 src/__main__.py
+  cd "$(dirname "$0")/kepler_isolation" && exec python3 src/__main__.py
   ```
   `chmod +x play`. Document `./play` in the README as the one-liner to start.
 - [x] Add **sparse, human comments** at the genuinely non-obvious code only
@@ -75,7 +75,7 @@ same-room detection, hiding, distractions, repair → send → ending, restart.
   - `game_state._resolve_boarding()` — countdown + failsafe intent.
   - `parser.parse_command()` — the alias / filler / multiword normalization.
   Comments explain **why**, never restate the code.
-- [x] Add a **pytest suite** (`thin_air_game/tests/`): parser aliases, map
+- [x] Add a **pytest suite** (`kepler_isolation/tests/`): parser aliases, map
   reachability, toxic death (human=2, synthetic=3), scanner direction/distance,
   monster boards after cave return, same-room kill, win requires all parts.
   Use a fixed RNG seed for determinism (`GameState.random_seed`).

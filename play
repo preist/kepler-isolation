@@ -2,5 +2,5 @@
 # THE THIN AIR — launcher.
 # Starts the game regardless of where it's invoked from.
 set -e
-cd "$(dirname "$0")/thin_air_game"
+cd "$(dirname "$0")/kepler_isolation"
 exec python3 src/__main__.py "$@"
