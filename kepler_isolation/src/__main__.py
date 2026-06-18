@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
-KEPLER ISOLATION - a terminal survival-horror text adventure.
+KEPLER ISOLATION — a terminal survival-horror text adventure.
 
-Run:  python3 src/__main__.py
+Run:  python3 src/__main__.py           (classic text mode, zero dependencies)
+      python3 src/__main__.py --tui      (rich Textual UI; needs `pip install textual`)
+
+This file is the classic plain print/input front-end. The game logic lives in
+GameEngine (engine.py); both this and the Textual UI (tui.py) drive that.
 """
 
 import sys
@@ -12,31 +16,22 @@ import textwrap
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from game_state import GameState, TOXIC_ROOMS
 from player import Player
-from parser import Parser
-from map_builder import create_rooms
+from engine import (
+    GameEngine, motion_label, ROLE_FLAVOR, INTRO_BODY,
+    ENDING_TRANSMISSION, ENDING_WARNING, ENDING_HEADER, ENDING_DIALOGUE,
+    ENDING_PAUSE, ENDING_WAKE, ENDING_RECLASSIFIED, ENDING_INVITED, ENDING_MISTAKE,
+)
 
 RULE = "-" * 60
 WIDTH = 74
 
-DEATH_TEXT = {
-    "toxic": "",  # message already printed by the simulation
-    "monster": {
-        "human": "The room becomes very small.\n"
-                 "You think of the face you meant to get back to. Then nothing.",
-        "synthetic": "It finds you. There is no fear — only the order, satisfied at last,\n"
-                     "and a final entry no one will read.",
-        "contract_specialist": "No clause covers this. You almost laugh.\n"
-                               "The contract was always going to be honoured this way.",
-    },
-}
 
+class ClassicGame:
+    """The plain terminal front-end, driven by GameEngine."""
 
-class ThinAirGame:
     def __init__(self):
-        self.gs = GameState()
-        self.parser = Parser(self.gs)
+        self.engine = GameEngine()
         self.last_room_id = None
         # Typewriter pacing is for atmosphere only: skip it for --fast, when the
         # env var is set, or when input/output isn't a real terminal (piped runs,
@@ -50,6 +45,10 @@ class ThinAirGame:
             sys.stdout.isatty()
             and "--no-color" not in sys.argv
             and not os.environ.get("NO_COLOR"))
+
+    @property
+    def gs(self):
+        return self.engine.gs
 
     def c(self, text: str, code: str) -> str:
         return f"\033[{code}m{text}\033[0m" if self.color else text
@@ -88,41 +87,16 @@ class ThinAirGame:
     def start(self):
         self.intro()
         self.create_character()
-        self.setup_world()
         self.main_loop()
 
     def intro(self):
         print()
         print("K E P L E R   I S O L A T I O N")
         print(RULE)
-        print("Survey lander LANTERN-9, grounded on LV-1187. They called it Kepler's Rest.")
-        print("Contract holder: Halloway-Tanaka Industries.")
-        print()
-        print("You wake on the ground. You do not remember the landing.")
-        print()
-        print("  Landing complete.")
-        print("  Atmosphere: lethal.")
-        print("  Signal source: local. Origin: below.")
-        print("  Crew status: one.")
-        print("  Crew status (revised): one.")
-        print()
-        print("A signal is coming up through the rock. It is old. It has not degraded,")
-        print("and that should not be possible. The contract calls it a rescue.")
-        print("The contract calls you recoverable.")
+        for line in INTRO_BODY:
+            print(line)
         print(RULE)
         print()
-
-    # Fixed personnel — one face per role. (All male, per the manifest.)
-    ROLES = {
-        "1": ("Elias Cole", "human"),
-        "2": ("Jonah", "synthetic"),
-        "3": ("Rourke Dunmore", "contract_specialist"),
-    }
-    ROLE_FLAVOR = {
-        "human": "You signed for the hazard pay. There is a face you mean to get back to.",
-        "synthetic": "The company's standing order sits in you, quiet. You decide, once\nmore, to ignore it.",
-        "contract_specialist": "You have read enough Halloway-Tanaka paper to know exactly what\n'recoverable' means.",
-    }
 
     def create_character(self):
         print("HALLOWAY-TANAKA PERSONNEL — assign role:")
@@ -130,41 +104,14 @@ class ThinAirGame:
         print("  2. Synthetic   — Jonah")
         print("  3. Contractor  — Rourke Dunmore")
         choice = input("> ").strip()
-        name, ptype = self.ROLES.get(choice, self.ROLES["1"])
-        self.gs.player = Player(name, "male", ptype)
-        label = ptype.replace("_", " ").title()
-        print(f"\n{name}. {label}.")
-        print(self.ROLE_FLAVOR[ptype])
+        player = self.engine.new_game(choice)
+        label = player.type.replace("_", " ").title()
+        print(f"\n{player.name}. {label}.")
+        print(ROLE_FLAVOR[player.type])
         print("The manifest lists him, and no one else.")
         print("\nType 'help' at any time.\n")
 
-    def setup_world(self):
-        self.gs.rooms = create_rooms()
-        self.gs.current_room_id = "cockpit"
-        self.gs.rooms["cockpit"].visited = True
-        self.gs.visited_rooms.add("cockpit")
-        self.gs.game_phase = "pre_cave"
-
     # ------------------------------------------------------------------ #
-    def motion_summary(self):
-        """Short scanner readout for the status line, if the player has a terminal."""
-        if not self.gs.player.has_terminal:
-            return None
-        m = self.gs.monster
-        if not m.active:
-            return "outside" if self.gs.get_flag("cave_triggered") else "none"
-        if self.gs.current_room.scanner_interference:
-            return "interference"
-        if m.turns_since_seen <= 1:
-            return "SEEN"
-        tracked = m.tracked_room_id or m.current_room_id
-        if tracked == self.gs.current_room_id:
-            return "HERE"
-        dist, direction = self.gs.shortest_path(self.gs.current_room_id, tracked)
-        if dist is None:
-            return "lost"
-        return f"{direction} {dist}"
-
     def status_line(self):
         room = self.gs.current_room
         suit = "worn" if self.gs.player.suit_worn else "none"
@@ -177,7 +124,7 @@ class ThinAirGame:
                  f"{self.c('Sound:', '2')} {self.c(sound, sound_code)}",
                  f"{self.c('Suit:', '2')} {self.c(suit, suit_code)}"]
 
-        motion = self.motion_summary()
+        motion = motion_label(self.engine.motion())
         if motion is not None:
             if motion in ("SEEN", "HERE"):
                 code = "1;31"
@@ -215,46 +162,31 @@ class ThinAirGame:
             if not command:
                 continue
 
-            before_room = self.gs.current_room_id
-            result = self.parser.parse_command(command)
-            if result:
-                print("\n" + result)
+            result = self.engine.submit(command)
+            for line in result.lines:
+                print("\n" + line)
 
-            if self.gs.quit_requested:
+            if result.quit:
                 return
-            if self.gs.restart_requested:
+            if result.restart:
                 self.restart()
                 return
-
-            # Sending the warning wins outright — you can't be killed on the
-            # keystroke that saves everyone. So resolve the win before the world.
-            if self.gs.win_state:
+            if result.won:
                 self.show_ending()
                 if self.prompt_again():
                     self.restart()
                 return
-
-            if self.gs.advance:
-                was_aboard = self.gs.get_flag("monster_boarded")
-                for msg in self.gs.advance_world():
-                    print("\n" + msg)
-                # The moment it comes aboard earns a held breath.
-                if self.gs.get_flag("monster_boarded") and not was_aboard:
-                    self.beat()
-
-            if self.gs.death_state:
+            # The moment it comes aboard earns a held breath.
+            if result.boarded_now:
+                self.beat()
+            if result.dead:
                 self.handle_death()
-                if self.prompt_again():
-                    self.restart()
-                return
-            if self.gs.win_state:
-                self.show_ending()
                 if self.prompt_again():
                     self.restart()
                 return
 
             # Re-render the full room after a move or a look; otherwise just status.
-            if self.gs.current_room_id != before_room or command.lower() in ("look", "l"):
+            if result.room_changed or command.lower() in ("look", "l"):
                 self.render_room()
             else:
                 print("\n" + self.status_line())
@@ -264,8 +196,7 @@ class ThinAirGame:
         print()
         print(RULE)
         if self.gs.death_state == "monster":
-            text = DEATH_TEXT["monster"].get(self.gs.player.type, DEATH_TEXT["monster"]["human"])
-            self.say(self.c(text, "31"), slow=True)
+            self.say(self.c(self.engine.death_text(), "31"), slow=True)
         elif self.gs.death_state == "toxic":
             pass  # already printed by the simulation
         print(RULE)
@@ -275,33 +206,26 @@ class ThinAirGame:
         self.beat()
         print()
         print(RULE)
-        self.say(self.c("TRANSMISSION SENT.", "1;36"), slow=True)
+        self.say(self.c(ENDING_TRANSMISSION, "1;36"), slow=True)
         print()
-        self.say(self.c("> DO NOT COME HERE.", "1;36"), slow=True)
+        self.say(self.c(ENDING_WARNING, "1;36"), slow=True)
         print()
-        print("HALLOWAY-TANAKA RELAY STATION")
-        print("SEVENTEEN DAYS LATER")
+        for line in ENDING_HEADER:
+            print(line)
         print()
-        for line in ('  "Play it again."',
-                     '  "Do not come here."',
-                     '  "We have this voice on file. Older transmission. Same rock."',
-                     '  "Then it confirms the site is viable for the asset."',
-                     '  "Survivors?"',
-                     '  "The crew is a rounding error. We want what they found."',
-                     '  "Is it intelligent?"',
-                     '  "It learned our beacon and aimed it back at us. Yes."'):
+        for line in ENDING_DIALOGUE:
             self.say(line, slow=True)
         print()
-        print("  A pause. Someone pours coffee.")
+        print(ENDING_PAUSE)
         print()
-        self.say('  "Wake the recovery team. Quietly."', slow=True)
+        self.say(ENDING_WAKE, slow=True)
         print()
-        self.say("LV-1187 is reclassified: priority acquisition.", slow=True)
+        self.say(ENDING_RECLASSIFIED, slow=True)
         print()
-        self.say(self.c("They are not warned.", "1;36"), slow=True)
-        self.say(self.c("They are invited.", "1;36"), slow=True)
+        for line in ENDING_INVITED:
+            self.say(self.c(line, "1;36"), slow=True)
         print(RULE)
-        print("\nThe warning was sent. That was the mistake.")
+        print("\n" + ENDING_MISTAKE)
 
     def prompt_again(self):
         try:
@@ -311,15 +235,13 @@ class ThinAirGame:
         return choice.startswith("r")
 
     def restart(self):
-        game = ThinAirGame()
-        # Keep the same character to skip re-creation.
-        game.gs.player = Player(self.gs.player.name, self.gs.player.gender, self.gs.player.type)
-        game.parser = Parser(game.gs)
-        game.setup_world()
+        # Keep the same character to skip re-creation; new_game resets the world.
+        player = Player(self.gs.player.name, self.gs.player.gender, self.gs.player.type)
+        self.engine.new_game(player=player)
         print("\n" + RULE)
         print("The descent sedation lifts. Again.")
         print(RULE)
-        game.main_loop()
+        self.main_loop()
 
 
 USAGE = """KEPLER ISOLATION — a terminal survival-horror text adventure.
@@ -331,6 +253,8 @@ Usage:
   ./play [options]          (or: python3 src/__main__.py [options])
 
 Options:
+  --tui         Launch the rich Textual UI (needs: pip install textual).
+  --classic     Force the plain text mode (the default).
   --fast        Skip the typewriter pacing on dramatic beats.
   --color       Force ANSI color (on by default for a terminal).
   --no-color    Disable color. (NO_COLOR is also respected.)
@@ -343,7 +267,16 @@ def main():
     if "--help" in sys.argv or "-h" in sys.argv:
         print(USAGE)
         return
-    ThinAirGame().start()
+    if "--tui" in sys.argv and "--classic" not in sys.argv:
+        try:
+            import tui
+        except ImportError:
+            print("The rich UI needs Textual:  pip install textual")
+            print("Or run the classic text mode:  ./play")
+            return
+        tui.run()
+        return
+    ClassicGame().start()
 
 
 if __name__ == "__main__":

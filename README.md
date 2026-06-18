@@ -52,6 +52,22 @@ That's it. Type `help` at any time in the game.
 
 ---
 
+## Optional: the rich UI
+
+There's a second way to play — a modern, **resizable** console interface with a
+status bar, a scrolling narrative log, and side panels (a **motion tracker**,
+exits, items here, inventory). It needs one package:
+
+```sh
+pip install textual        # or: pip install -r kepler_isolation/requirements-tui.txt
+./play --tui
+```
+
+Resize the window and the layout reflows. Everything else plays the same — and
+the classic text mode above needs no install and stays the default.
+
+---
+
 ## Don't have Python yet?
 
 Check first — open a terminal and run `python3 --version` (macOS/Linux) or

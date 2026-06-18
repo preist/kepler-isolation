@@ -1,0 +1,3 @@
+# Optional: only needed for the rich Textual UI (./play --tui).
+# The classic text mode (./play) needs none of this — pure standard library.
+textual>=0.60
