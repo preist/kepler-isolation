@@ -15,11 +15,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Header, Footer, Input, RichLog, Static
+from textual.widgets import Header, Input, RichLog, Static
 from rich.text import Text
 from rich.markup import escape
 
 from player import Player
+import leaderboard as lb
 from engine import (
     GameEngine, motion_label, ROLE_FLAVOR, INTRO_BODY,
     ENDING_TRANSMISSION, ENDING_WARNING, ENDING_HEADER, ENDING_DIALOGUE,
@@ -98,7 +99,8 @@ class KeplerApp(App):
     def __init__(self):
         super().__init__()
         self.engine = GameEngine()
-        self.mode = "role"   # role | play | over
+        self.mode = "role"   # role | play | leaderboard | over
+        self._lb_qualifies = False   # set at win time
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -111,7 +113,6 @@ class KeplerApp(App):
                 yield Static("", id="here", classes="panel")
                 yield Static("", id="inv", classes="panel")
         yield Input(id="cmd", placeholder="type a command — e.g. look, take terminal, help")
-        yield Footer()
 
     # ------------------------------------------------------------------ #
     def on_mount(self) -> None:
@@ -165,6 +166,10 @@ class KeplerApp(App):
             self._start(text)
             return
 
+        if self.mode == "leaderboard":
+            self._record_leaderboard(text)
+            return
+
         if self.mode == "over":
             low = text.lower()
             if low.startswith("r"):
@@ -187,7 +192,7 @@ class KeplerApp(App):
             return
         if result.won:
             self._show_ending()
-            self.mode = "over"
+            self.mode = "leaderboard" if self._lb_qualifies else "over"
             self._refresh()
             return
         if result.dead:
@@ -250,7 +255,40 @@ class KeplerApp(App):
         for line in ENDING_INVITED:
             self._w(f"[b cyan]{escape(line)}[/]")
         self._w(f"[b]{escape(ENDING_MISTAKE)}[/]")
+        self.rlog.write("")
+        moves = self.engine.turn_count
+        scores = lb.load()
+        self._lb_qualifies = lb.qualifies(moves, scores)
+        if self._lb_qualifies:
+            default = self.engine.player.name if self.engine.player else "Unknown"
+            self._w(f"[b green]You won in {moves} moves — TOP 10![/]")
+            self._w(f"[dim]Enter your name (up to 40 chars) and press Enter  [{escape(default)}]:[/]")
+            self.query_one("#cmd", Input).placeholder = f"name — or press Enter for '{default}'"
+        else:
+            self._w(f"[dim]You won in {moves} moves.[/]")
+            self._show_leaderboard(scores)
+            self._w("[dim]Type 'restart' or 'quit'.[/]")
+
+    def _record_leaderboard(self, name: str) -> None:
+        moves = self.engine.turn_count
+        player = self.engine.player
+        default = player.name if player else "Unknown"
+        name = (name[:lb.MAX_NAME_LEN].strip()) or default
+        role = player.type if player else "human"
+        scores = lb.load()
+        scores, rank = lb.insert(name, role, moves, scores)
+        self._w(f"[b green]Rank #{rank}  —  {escape(name)}  —  {moves} moves[/]")
+        self._show_leaderboard(scores)
+        self.query_one("#cmd", Input).placeholder = "type a command — e.g. look, take terminal, help"
         self._w("[dim]Type 'restart' or 'quit'.[/]")
+        self.mode = "over"
+
+    def _show_leaderboard(self, scores: list) -> None:
+        self.rlog.write("")
+        self._w("[b]TOP 10  —  fewest moves to win[/]")
+        for line in lb.format_table(scores):
+            self.rlog.write(line)
+        self.rlog.write("")
 
 
 def status_blank() -> str:

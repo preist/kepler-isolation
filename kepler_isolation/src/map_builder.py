@@ -39,7 +39,7 @@ TOXIC_ROOMS = {"surface", "landing_gear", "ridge", "cave_mouth", "signal_cave", 
 # --- Narrative readables (the story is assembled from fragments, never told) ---
 
 MEMO_TEXT = (
-    "HALLOWAY-TANAKA INDUSTRIES — INTERNAL. Re: LV-1187, vessel LANTERN-9.\n"
+    "HALLOWAY-TANAKA INDUSTRIES — INTERNAL. Re: Kepler-186f, vessel LANTERN-9.\n"
     "Objective: recover the biological specimen intact.\n"
     "Assets are recoverable. Crews perform best uninformed.\n"
     "Welcome aboard. Build something that lasts."

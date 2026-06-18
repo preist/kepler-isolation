@@ -22,6 +22,7 @@ from engine import (
     ENDING_TRANSMISSION, ENDING_WARNING, ENDING_HEADER, ENDING_DIALOGUE,
     ENDING_PAUSE, ENDING_WAKE, ENDING_RECLASSIFIED, ENDING_INVITED, ENDING_MISTAKE,
 )
+import leaderboard as lb
 
 RULE = "-" * 60
 WIDTH = 74
@@ -226,6 +227,32 @@ class ClassicGame:
             self.say(self.c(line, "1;36"), slow=True)
         print(RULE)
         print("\n" + ENDING_MISTAKE)
+        self._leaderboard_prompt()
+
+    def _leaderboard_prompt(self):
+        moves = self.gs.turn_count
+        player = self.gs.player
+        scores = lb.load()
+        print()
+        print(RULE)
+        print(self.c("TOP 10  —  fewest moves to win", "1"))
+        if lb.qualifies(moves, scores):
+            print(f"\nYou won in {moves} moves — that qualifies for the top 10!")
+            default = player.name if player else "Unknown"
+            try:
+                raw = input(f"Enter your name (up to 40 chars) [{default}]: ").strip()
+            except (KeyboardInterrupt, EOFError):
+                raw = ""
+            name = raw[:lb.MAX_NAME_LEN] or default
+            role = player.type if player else "human"
+            scores, rank = lb.insert(name, role, moves, scores)
+            print(self.c(f"\nRank #{rank}  —  {name}  —  {moves} moves", "1;32"))
+        else:
+            print(f"\nYou won in {moves} moves.")
+        print()
+        for line in lb.format_table(scores):
+            print(line)
+        print(RULE)
 
     def prompt_again(self):
         try:

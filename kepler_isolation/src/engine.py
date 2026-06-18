@@ -43,7 +43,7 @@ DEATH_TEXT = {
 }
 
 INTRO_BODY = [
-    "Survey lander LANTERN-9, grounded on LV-1187. They called it Kepler's Rest.",
+    "Survey lander LANTERN-9, grounded on Kepler-186f. They called it Kepler's Rest.",
     "Contract holder: Halloway-Tanaka Industries.",
     "",
     "You wake on the ground. You do not remember the landing.",
@@ -75,7 +75,7 @@ ENDING_DIALOGUE = [
 ]
 ENDING_PAUSE = "  A pause. Someone pours coffee."
 ENDING_WAKE = '  "Wake the recovery team. Quietly."'
-ENDING_RECLASSIFIED = "LV-1187 is reclassified: priority acquisition."
+ENDING_RECLASSIFIED = "Kepler-186f is reclassified: priority acquisition."
 ENDING_INVITED = ["They are not warned.", "They are invited."]
 ENDING_MISTAKE = "The warning was sent. That was the mistake."
 
