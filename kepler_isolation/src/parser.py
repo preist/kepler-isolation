@@ -240,7 +240,7 @@ class Parser:
         self._act(0)
         gs = self.game_state
         m = gs.monster
-        if m.active and m.phase == "aboard":
+        if m.active and m.phase == "aboard" and m.current_room_id is not None:
             dist, _ = gs.shortest_path(gs.current_room_id, m.current_room_id)
             if dist == 0:
                 return "Breathing. Not yours."
@@ -438,6 +438,8 @@ class Parser:
 
         # Read the scanner's *belief*, not the truth — it can be a turn stale.
         tracked = m.tracked_room_id or m.current_room_id
+        if tracked is None:
+            return "MOTION: none\nDISTANCE: ---\nSIGNAL: lost"
         if tracked == gs.current_room_id:
             return "MOTION: here\nDISTANCE: 0\nSIGNAL: inside the room"
 

@@ -53,7 +53,7 @@ class Monster:
     def get_highest_suspicion_room(self):
         if not self.suspicion_by_room:
             return None
-        room_id = max(self.suspicion_by_room, key=self.suspicion_by_room.get)
+        room_id = max(self.suspicion_by_room, key=lambda r: self.suspicion_by_room.get(r, 0))
         if self.suspicion_by_room[room_id] <= 0:
             return None
         return room_id

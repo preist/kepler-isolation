@@ -231,7 +231,7 @@ class KeplerApp(App):
         self._refresh()
 
     def _restart(self) -> None:
-        p = self.engine.gs.player
+        p = self.engine.player
         self.engine.new_game(player=Player(p.name, p.gender, p.type))
         self.rlog.clear()
         self._w("[dim]The descent sedation lifts. Again.[/]")

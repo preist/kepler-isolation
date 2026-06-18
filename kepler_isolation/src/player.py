@@ -21,8 +21,8 @@ class Player:
 
         # Game state
         self.hidden = False
-        self.hidden_spot = None  # the spot dict the player is using
-        self.last_room_id = None
+        self.hidden_spot: dict | None = None  # the spot dict the player is using
+        self.last_room_id: str | None = None
         self.stayed_turns_in_room = 0
 
         # Inventory

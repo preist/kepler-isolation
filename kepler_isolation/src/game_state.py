@@ -341,9 +341,12 @@ class GameState:
         m = self.monster
         sound = self.last_action_sound
         proom = self.current_room_id
-        dist, _ = self.shortest_path(proom, m.current_room_id, use_vents=False)
-        if dist is None:
+        if m.current_room_id is None:
             dist = 99
+        else:
+            dist, _ = self.shortest_path(proom, m.current_room_id, use_vents=False)
+            if dist is None:
+                dist = 99
 
         # Ambient reactor masking: small sounds vanish near the reactor.
         room = self.current_room
@@ -422,6 +425,8 @@ class GameState:
             return
 
         # Speed control: when calm and far, move every other turn.
+        if m.current_room_id is None:
+            return
         target = self._choose_target()
         if target is None:
             # Patrol: random neighbour occasionally.
@@ -448,6 +453,8 @@ class GameState:
 
     def _step_monster(self, direction, use_vents):
         m = self.monster
+        if m.current_room_id is None:
+            return
         room = self.rooms[m.current_room_id]
         if direction == "vent":
             # Vents are not direction-keyed; take the first one and pay the
@@ -463,7 +470,7 @@ class GameState:
 
     def _maybe_telegraph(self):
         m = self.monster
-        if m.current_room_id == self.current_room_id:
+        if m.current_room_id is None or m.current_room_id == self.current_room_id:
             return None
         dist, _ = self.shortest_path(self.current_room_id, m.current_room_id)
         if dist is None or dist > 2:
@@ -481,8 +488,9 @@ class GameState:
         """The scanner is useful but never perfect (design pillar #1). It lags,
         and it flickers when the creature is close or near interference — so a
         reading can be a turn stale, which is exactly where dread lives."""
+        assert self.player is not None
         m = self.monster
-        if self.current_room.scanner_interference:
+        if self.current_room.scanner_interference or m.current_room_id is None:
             return  # handle_scan reports "scrambled"; leave the belief stale
         dist, _ = self.shortest_path(self.current_room_id, m.current_room_id)
         fresh = 0.85
