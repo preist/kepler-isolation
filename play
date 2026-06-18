@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# THE THIN AIR — launcher.
+# KEPLER ISOLATION — launcher.
 # Starts the game regardless of where it's invoked from.
 set -e
 cd "$(dirname "$0")/kepler_isolation"
