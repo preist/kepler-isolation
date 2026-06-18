@@ -8,17 +8,16 @@ text (intro body, role flavor, death lines, the ending) lives here so the two
 front-ends can never drift apart — each only decides how to *frame* it.
 """
 
-import sys
 import os
+import sys
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from game_state import GameState
-from player import Player
-from parser import Parser
 from map_builder import create_rooms
+from parser import Parser
+from player import Player
 
 # --- Shared content (single source of truth for both front-ends) ---
 
@@ -34,12 +33,11 @@ ROLE_FLAVOR = {
 }
 
 DEATH_TEXT = {
-    "human": "The room becomes very small.\n"
-             "You think of the face you meant to get back to. Then nothing.",
+    "human": "The room becomes very small.\nYou think of the face you meant to get back to. Then nothing.",
     "synthetic": "It finds you. There is no fear — only the order, satisfied at last,\n"
-                 "and a final entry no one will read.",
+    "and a final entry no one will read.",
     "contract_specialist": "No clause covers this. You almost laugh.\n"
-                           "The contract was always going to be honoured this way.",
+    "The contract was always going to be honoured this way.",
 }
 
 INTRO_BODY = [
@@ -83,11 +81,12 @@ ENDING_MISTAKE = "The warning was sent. That was the mistake."
 @dataclass
 class TurnResult:
     """What one submitted command produced."""
-    lines: List[str] = field(default_factory=list)
+
+    lines: list[str] = field(default_factory=list)
     advanced: bool = False
     room_changed: bool = False
-    boarded_now: bool = False     # the creature came aboard on this turn
-    dead: Optional[str] = None    # death cause, or None
+    boarded_now: bool = False  # the creature came aboard on this turn
+    dead: str | None = None  # death cause, or None
     won: bool = False
     quit: bool = False
     restart: bool = False
@@ -137,18 +136,17 @@ class GameEngine:
         boarded_now = gs.get_flag("monster_boarded") and not was_aboard
 
         if gs.death_state:
-            return TurnResult(lines, advanced=advanced, dead=gs.death_state,
-                              boarded_now=boarded_now)
+            return TurnResult(lines, advanced=advanced, dead=gs.death_state, boarded_now=boarded_now)
         if gs.win_state:
-            return TurnResult(lines, advanced=advanced, won=True,
-                              boarded_now=boarded_now)
-        return TurnResult(lines, advanced=advanced,
-                          room_changed=(gs.current_room_id != before),
-                          boarded_now=boarded_now)
+            return TurnResult(lines, advanced=advanced, won=True, boarded_now=boarded_now)
+        return TurnResult(
+            lines, advanced=advanced, room_changed=(gs.current_room_id != before), boarded_now=boarded_now
+        )
 
     # --- Panel / status accessors -------------------------------------- #
     @property
-    def player(self):
+    def player(self) -> Player:
+        assert self.gs.player is not None, "engine.player accessed before new_game()"
         return self.gs.player
 
     @property
@@ -159,17 +157,17 @@ class GameEngine:
         return self.gs.current_room.describe(self.gs)
 
     @property
-    def exits(self) -> List[str]:
+    def exits(self) -> list[str]:
         return list(self.gs.current_room.exits.keys())
 
     @property
-    def room_items(self) -> List[str]:
+    def room_items(self) -> list[str]:
         return [i.name for i in self.gs.current_room.items]
 
     @property
-    def inventory(self) -> List[str]:
-        return ([i.name for i in self.gs.player.inventory]
-                + [f"{i.name} (worn)" for i in self.gs.player.worn_items])
+    def inventory(self) -> list[str]:
+        p = self.player
+        return [i.name for i in p.inventory] + [f"{i.name} (worn)" for i in p.worn_items]
 
     @property
     def sound_level(self) -> str:
@@ -177,7 +175,7 @@ class GameEngine:
 
     @property
     def suit_status(self) -> str:
-        return "worn" if self.gs.player.suit_worn else "none"
+        return "worn" if self.player.suit_worn else "none"
 
     @property
     def turn_count(self) -> int:
@@ -189,7 +187,7 @@ class GameEngine:
 
     @property
     def has_terminal(self) -> bool:
-        return self.gs.player.has_terminal
+        return self.player.has_terminal
 
     @property
     def toxic_here(self) -> bool:
@@ -203,7 +201,7 @@ class GameEngine:
         """Structured scanner reading (front-ends decide how to show it).
         kind ∈ no_device | none | outside | interference | seen | here | lost | bearing."""
         gs = self.gs
-        if not gs.player.has_terminal:
+        if not self.player.has_terminal:
             return {"kind": "no_device"}
         m = gs.monster
         if not m.active:
@@ -213,6 +211,8 @@ class GameEngine:
         if m.turns_since_seen <= 1:
             return {"kind": "seen"}
         tracked = m.tracked_room_id or m.current_room_id
+        if tracked is None:
+            return {"kind": "lost"}
         if tracked == gs.current_room_id:
             return {"kind": "here"}
         dist, direction = gs.shortest_path(gs.current_room_id, tracked)
@@ -221,7 +221,7 @@ class GameEngine:
         return {"kind": "bearing", "direction": direction, "distance": dist}
 
 
-def motion_label(m: dict) -> Optional[str]:
+def motion_label(m: dict) -> str | None:
     """Collapse a motion() dict into the legacy one-line status string
     ('none' / 'outside' / 'interference' / 'SEEN' / 'HERE' / 'lost' /
     '<dir> <dist>'), or None when there is no device."""

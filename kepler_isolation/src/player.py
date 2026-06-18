@@ -2,11 +2,10 @@
 Player class for KEPLER ISOLATION game
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys
 
-from item import Item
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 class Player:
@@ -22,7 +21,7 @@ class Player:
 
         # Game state
         self.hidden = False
-        self.hidden_spot = None          # the spot dict the player is using
+        self.hidden_spot = None  # the spot dict the player is using
         self.last_room_id = None
         self.stayed_turns_in_room = 0
 
@@ -32,7 +31,7 @@ class Player:
 
         # Progress flags mirrored for convenience
         self.has_terminal = False
-        self.has_power_coupler = False   # installed in transmitter
+        self.has_power_coupler = False  # installed in transmitter
         self.has_signal_relay = False
         self.has_antenna_key = False
         self.transmitter_repaired = False

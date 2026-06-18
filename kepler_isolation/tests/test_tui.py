@@ -14,6 +14,7 @@ if importlib.util.find_spec("textual") is None:
     pytest.skip("textual not installed (optional UI)", allow_module_level=True)
 
 from textual.widgets import Static
+
 from tui import KeplerApp
 
 
@@ -27,7 +28,7 @@ def test_tui_role_take_move():
         async with app.run_test() as pilot:
             inp = app.query_one("#cmd")
 
-            inp.value = "1"                      # pick Crew
+            inp.value = "1"  # pick Crew
             await pilot.press("enter")
             await pilot.pause()
             assert app.mode == "play"

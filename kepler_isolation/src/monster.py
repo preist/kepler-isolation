@@ -6,8 +6,9 @@ selection, detection) is driven by GameState, which has access to the room
 graph. This class holds the monster's state and a few small helpers.
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -16,17 +17,17 @@ class Monster:
         self.active = False
         # dormant, following, aboard
         self.phase = "dormant"
-        self.current_room_id = None
+        self.current_room_id: str | None = None
         # behavioural state: aboard, investigating, hunting, searching, feeding
         self.state = "dormant"
-        self.target_room_id = None
-        self.last_heard_room_id = None
-        self.last_seen_room_id = None
+        self.target_room_id: str | None = None
+        self.last_heard_room_id: str | None = None
+        self.last_seen_room_id: str | None = None
         self.suspicion_by_room = {}
         self.turns_since_seen = 999
         self.turns_since_heard = 999
         self.movement_cooldown = 0
-        self.aggression = 0              # 0 low .. 3 very high
+        self.aggression = 0  # 0 low .. 3 very high
         self.distracted_until_turn = 0
         self.can_use_vents = False
         # how many times in a row it has been in the player's room while the
@@ -35,11 +36,11 @@ class Monster:
 
         # --- Phase 2: the intelligence ---
         # What the scanner currently *believes* — lagged/imperfect, not ground truth.
-        self.tracked_room_id = None
+        self.tracked_room_id: str | None = None
         # Times the player has lured it with a thrown distraction; it wises up.
         self.distraction_uses = 0
         # A hiding spot it has caught the player using; it checks there first.
-        self.known_hide_room = None
+        self.known_hide_room: str | None = None
         # Rate-limit vent shortcuts so they stay spice, not teleportation.
         self.vent_cooldown = 0
         self.used_vent_last_move = False

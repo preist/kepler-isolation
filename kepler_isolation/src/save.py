@@ -8,19 +8,29 @@ monster, and the flags. Everything is plain JSON, so a save is inspectable and
 survives small code changes.
 """
 
-import os
 import json
+import os
 
-from player import Player
 from map_builder import create_rooms
+from player import Player
 
 SAVE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "savegame.json")
 VERSION = 1
 
 # Item attributes we round-trip (covers items wherever they live).
-_ITEM_FIELDS = ("name", "aliases", "description", "portable", "wearable", "worn",
-                "readable_text", "use_effect", "install_target", "sound_on_use",
-                "required_for_win")
+_ITEM_FIELDS = (
+    "name",
+    "aliases",
+    "description",
+    "portable",
+    "wearable",
+    "worn",
+    "readable_text",
+    "use_effect",
+    "install_target",
+    "sound_on_use",
+    "required_for_win",
+)
 
 
 def _item_to_dict(item):
@@ -29,11 +39,20 @@ def _item_to_dict(item):
 
 def _item_from_dict(d):
     from item import Item
-    return Item(d["name"], d["aliases"], d["description"],
-                portable=d["portable"], wearable=d["wearable"], worn=d["worn"],
-                readable_text=d["readable_text"], use_effect=d["use_effect"],
-                install_target=d["install_target"], sound_on_use=d["sound_on_use"],
-                required_for_win=d["required_for_win"])
+
+    return Item(
+        d["name"],
+        d["aliases"],
+        d["description"],
+        portable=d["portable"],
+        wearable=d["wearable"],
+        worn=d["worn"],
+        readable_text=d["readable_text"],
+        use_effect=d["use_effect"],
+        install_target=d["install_target"],
+        sound_on_use=d["sound_on_use"],
+        required_for_win=d["required_for_win"],
+    )
 
 
 def to_dict(gs) -> dict:
@@ -49,8 +68,11 @@ def to_dict(gs) -> dict:
         "flags": dict(gs.flags),
         "visited_rooms": sorted(gs.visited_rooms),
         "player": {
-            "name": p.name, "gender": p.gender, "type": p.type,
-            "health": p.health, "suit_worn": p.suit_worn,
+            "name": p.name,
+            "gender": p.gender,
+            "type": p.type,
+            "health": p.health,
+            "suit_worn": p.suit_worn,
             "outside_exposure_turns": p.outside_exposure_turns,
             "hidden": p.hidden,
             "hidden_spot_name": p.hidden_spot["name"] if p.hidden_spot else None,
@@ -69,8 +91,7 @@ def to_dict(gs) -> dict:
             rid: {
                 "visited": room.visited,
                 "items": [_item_to_dict(i) for i in room.items],
-                "hiding_spots": [{"name": s["name"], "reuse": s["reuse"]}
-                                 for s in room.hiding_spots],
+                "hiding_spots": [{"name": s["name"], "reuse": s["reuse"]} for s in room.hiding_spots],
             }
             for rid, room in gs.rooms.items()
         },

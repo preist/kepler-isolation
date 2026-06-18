@@ -9,20 +9,30 @@ This file is the classic plain print/input front-end. The game logic lives in
 GameEngine (engine.py); both this and the Textual UI (tui.py) drive that.
 """
 
-import sys
 import os
-import time
+import sys
 import textwrap
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from player import Player
-from engine import (
-    GameEngine, motion_label, ROLE_FLAVOR, INTRO_BODY,
-    ENDING_TRANSMISSION, ENDING_WARNING, ENDING_HEADER, ENDING_DIALOGUE,
-    ENDING_PAUSE, ENDING_WAKE, ENDING_RECLASSIFIED, ENDING_INVITED, ENDING_MISTAKE,
-)
 import leaderboard as lb
+from engine import (
+    ENDING_DIALOGUE,
+    ENDING_HEADER,
+    ENDING_INVITED,
+    ENDING_MISTAKE,
+    ENDING_PAUSE,
+    ENDING_RECLASSIFIED,
+    ENDING_TRANSMISSION,
+    ENDING_WAKE,
+    ENDING_WARNING,
+    INTRO_BODY,
+    ROLE_FLAVOR,
+    GameEngine,
+    motion_label,
+)
+from player import Player
 
 RULE = "-" * 60
 WIDTH = 74
@@ -43,9 +53,8 @@ class ClassicGame:
         # Color is on for a real terminal by default; --color forces it,
         # --no-color / NO_COLOR turn it off. Restrained palette only.
         self.color = "--color" in sys.argv or (
-            sys.stdout.isatty()
-            and "--no-color" not in sys.argv
-            and not os.environ.get("NO_COLOR"))
+            sys.stdout.isatty() and "--no-color" not in sys.argv and not os.environ.get("NO_COLOR")
+        )
 
     @property
     def gs(self):
@@ -115,15 +124,17 @@ class ClassicGame:
     # ------------------------------------------------------------------ #
     def status_line(self):
         room = self.gs.current_room
-        suit = "worn" if self.gs.player.suit_worn else "none"
+        suit = "worn" if self.engine.player.suit_worn else "none"
 
         sound = self.gs.sound_level
         sound_code = {"audible": "33", "loud": "31", "violent": "1;31"}.get(sound, "2")
         suit_code = "31" if (suit == "none" and room.toxic) else "2"
 
-        parts = [f"{self.c('Location:', '2')} {room.name}",
-                 f"{self.c('Sound:', '2')} {self.c(sound, sound_code)}",
-                 f"{self.c('Suit:', '2')} {self.c(suit, suit_code)}"]
+        parts = [
+            f"{self.c('Location:', '2')} {room.name}",
+            f"{self.c('Sound:', '2')} {self.c(sound, sound_code)}",
+            f"{self.c('Suit:', '2')} {self.c(suit, suit_code)}",
+        ]
 
         motion = motion_label(self.engine.motion())
         if motion is not None:
@@ -243,7 +254,7 @@ class ClassicGame:
                 raw = input(f"Enter your name (up to 40 chars) [{default}]: ").strip()
             except (KeyboardInterrupt, EOFError):
                 raw = ""
-            name = raw[:lb.MAX_NAME_LEN] or default
+            name = raw[: lb.MAX_NAME_LEN] or default
             role = player.type if player else "human"
             scores, rank = lb.insert(name, role, moves, scores)
             print(self.c(f"\nRank #{rank}  —  {name}  —  {moves} moves", "1;32"))
@@ -263,7 +274,8 @@ class ClassicGame:
 
     def restart(self):
         # Keep the same character to skip re-creation; new_game resets the world.
-        player = Player(self.gs.player.name, self.gs.player.gender, self.gs.player.type)
+        prev = self.engine.player
+        player = Player(prev.name, prev.gender, prev.type)
         self.engine.new_game(player=player)
         print("\n" + RULE)
         print("The descent sedation lifts. Again.")

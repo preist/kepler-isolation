@@ -7,29 +7,38 @@ by the same GameEngine the classic mode uses. Modeled on a modern MUD client:
 scrollback + gauges. Requires `textual`.
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from rich.markup import escape
+from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Input, RichLog, Static
-from rich.text import Text
-from rich.markup import escape
 
-from player import Player
 import leaderboard as lb
 from engine import (
-    GameEngine, motion_label, ROLE_FLAVOR, INTRO_BODY,
-    ENDING_TRANSMISSION, ENDING_WARNING, ENDING_HEADER, ENDING_DIALOGUE,
-    ENDING_PAUSE, ENDING_WAKE, ENDING_RECLASSIFIED, ENDING_INVITED, ENDING_MISTAKE,
+    ENDING_DIALOGUE,
+    ENDING_HEADER,
+    ENDING_INVITED,
+    ENDING_MISTAKE,
+    ENDING_PAUSE,
+    ENDING_RECLASSIFIED,
+    ENDING_TRANSMISSION,
+    ENDING_WAKE,
+    ENDING_WARNING,
+    INTRO_BODY,
+    ROLE_FLAVOR,
+    GameEngine,
+    motion_label,
 )
+from player import Player
 
 # Compass glyphs for the tracker bearing.
-ARROWS = {"north": "↑", "south": "↓", "east": "→", "west": "←",
-          "up": "▲", "down": "▼", "in": "⊙", "out": "⊗"}
+ARROWS = {"north": "↑", "south": "↓", "east": "→", "west": "←", "up": "▲", "down": "▼", "in": "⊙", "out": "⊗"}
 
 # Narrow terminals drop the sidebar so the log keeps priority.
 NARROW = 64
@@ -50,9 +59,9 @@ def tracker_markup(m: dict) -> str:
     if k == "lost":
         return f"{head}\n[yellow]signal lost[/]"
     if k == "seen":
-        return f"[b red]◢ MOTION TRACKER ◣[/]\n[blink bold red]IT SEES YOU[/]"
+        return "[b red]◢ MOTION TRACKER ◣[/]\n[blink bold red]IT SEES YOU[/]"
     if k == "here":
-        return f"[b red]◢ MOTION TRACKER ◣[/]\n[bold red]CONTACT — THIS ROOM[/]"
+        return "[b red]◢ MOTION TRACKER ◣[/]\n[bold red]CONTACT — THIS ROOM[/]"
     # bearing
     d, dist = m["direction"], m["distance"]
     color = "red" if dist <= 2 else "yellow"
@@ -66,10 +75,12 @@ def status_markup(engine: GameEngine) -> str:
     sound_c = {"audible": "yellow", "loud": "red", "violent": "bold red"}.get(sound, "dim")
     suit = engine.suit_status
     suit_c = "red" if (suit == "none" and engine.toxic_here) else "dim"
-    parts = [f"[dim]LOC[/] {escape(engine.location_name)}",
-             f"[dim]SOUND[/] [{sound_c}]{sound}[/]",
-             f"[dim]SUIT[/] [{suit_c}]{suit}[/]",
-             f"[dim]TURN[/] {engine.turn_count}"]
+    parts = [
+        f"[dim]LOC[/] {escape(engine.location_name)}",
+        f"[dim]SOUND[/] [{sound_c}]{sound}[/]",
+        f"[dim]SUIT[/] [{suit_c}]{suit}[/]",
+        f"[dim]TURN[/] {engine.turn_count}",
+    ]
     mt = motion_label(engine.motion())
     if mt is not None:
         if mt in ("SEEN", "HERE"):
@@ -99,8 +110,8 @@ class KeplerApp(App):
     def __init__(self):
         super().__init__()
         self.engine = GameEngine()
-        self.mode = "role"   # role | play | leaderboard | over
-        self._lb_qualifies = False   # set at win time
+        self.mode = "role"  # role | play | leaderboard | over
+        self._lb_qualifies = False  # set at win time
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -273,7 +284,7 @@ class KeplerApp(App):
         moves = self.engine.turn_count
         player = self.engine.player
         default = player.name if player else "Unknown"
-        name = (name[:lb.MAX_NAME_LEN].strip()) or default
+        name = (name[: lb.MAX_NAME_LEN].strip()) or default
         role = player.type if player else "human"
         scores = lb.load()
         scores, rank = lb.insert(name, role, moves, scores)

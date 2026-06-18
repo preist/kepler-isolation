@@ -6,17 +6,19 @@ GameState holds everything (player, rooms, monster, flags) and owns the
 atmosphere, the boarding event, and same-room detection.
 """
 
-import sys
 import os
 import random
+import sys
 from collections import deque
+from typing import TYPE_CHECKING
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from player import Player
-from room import Room
-from item import Item
 from monster import Monster
+from room import Room
+
+if TYPE_CHECKING:
+    from player import Player
 
 # Deterministic tie-break order for shortest-path direction reporting.
 DIRECTION_ORDER = ["north", "south", "east", "west", "up", "down", "in", "out"]
@@ -52,8 +54,8 @@ HUNT_SIGNS = [
 
 class GameState:
     def __init__(self):
-        self.player = None
-        self.rooms = {}
+        self.player: Player | None = None
+        self.rooms: dict = {}
         self.current_room_id = "cockpit"
         self.turn_count = 0
         # intro, pre_cave, outside, cave_triggered, returned_to_ship,
@@ -67,7 +69,7 @@ class GameState:
         self.last_action_sound = 0
 
         # Per-command control set by the parser
-        self.advance = False          # did this command advance time?
+        self.advance = False  # did this command advance time?
         self.quit_requested = False
         self.restart_requested = False
 
@@ -111,7 +113,7 @@ class GameState:
     def set_flag(self, name: str, value: bool):
         self.flags[name] = value
 
-    def get_room(self, room_id: str) -> Room:
+    def get_room(self, room_id: str) -> "Room | None":
         return self.rooms.get(room_id)
 
     @property
@@ -129,9 +131,9 @@ class GameState:
         room = self.rooms.get(room_id)
         if not room:
             return
-        ordered = sorted(room.exits.items(),
-                         key=lambda kv: DIRECTION_ORDER.index(kv[0])
-                         if kv[0] in DIRECTION_ORDER else 99)
+        ordered = sorted(
+            room.exits.items(), key=lambda kv: DIRECTION_ORDER.index(kv[0]) if kv[0] in DIRECTION_ORDER else 99
+        )
         for direction, dest in ordered:
             yield direction, dest
         if use_vents:
@@ -194,6 +196,7 @@ class GameState:
     def advance_world(self):
         """Run one full turn of simulation after a time-advancing command.
         Returns a list of message lines to display."""
+        assert self.player is not None, "advance_world called before new_game()"
         # The order below is deliberate: toxic air can kill before the monster
         # ever moves, and boarding must resolve before we simulate an aboard
         # monster on the same turn it arrives.
@@ -238,6 +241,7 @@ class GameState:
         return msgs
 
     def _resolve_toxic(self):
+        assert self.player is not None
         room = self.current_room
         if room.toxic and not self.player.is_wearing_suit():
             self.player.outside_exposure_turns += 1
@@ -260,24 +264,32 @@ class GameState:
     def _resolve_boarding(self):
         msgs = []
         # Start the countdown when the player returns to the airlock after the cave.
-        if (self.get_flag("cave_triggered")
-                and not self.get_flag("monster_boarded")
-                and self.board_countdown is None
-                and self.current_room_id == "airlock"
-                and self.get_flag("went_outside")):
+        if (
+            self.get_flag("cave_triggered")
+            and not self.get_flag("monster_boarded")
+            and self.board_countdown is None
+            and self.current_room_id == "airlock"
+            and self.get_flag("went_outside")
+        ):
             self.set_flag("returned_after_cave", True)
             self.board_countdown = self.rng.randint(4, 6)
-            msgs.append("The inner hatch cycles shut behind you.\n"
-                        "Warm air. The old hum. For a moment everything is almost normal.")
+            msgs.append(
+                "The inner hatch cycles shut behind you.\n"
+                "Warm air. The old hum. For a moment everything is almost normal."
+            )
 
         # Failsafe: if the player lingers on the ship a long time after the cave
         # trigger without the airlock event, the thing finds another way in.
         # No free pacifist run: if the player lingers aboard and never triggers
         # the cave, the thing got in some other way. Generous threshold — the
         # intended cave trip trips boarding long before this.
-        if (not self.get_flag("cave_triggered") and not self.get_flag("monster_boarded")
-                and self.board_countdown is None and self.turn_count > 25
-                and self.current_room_id not in TOXIC_ROOMS):
+        if (
+            not self.get_flag("cave_triggered")
+            and not self.get_flag("monster_boarded")
+            and self.board_countdown is None
+            and self.turn_count > 25
+            and self.current_room_id not in TOXIC_ROOMS
+        ):
             self.set_flag("cave_triggered", True)
             self.monster.phase = "following"
             self.board_countdown = 2
@@ -285,12 +297,14 @@ class GameState:
         # Failsafe so the game can't stall: if the player triggers the cave but
         # somehow never returns through the airlock, the thing finds another way
         # in eventually. (In practice the airlock event above pre-empts this.)
-        if (self.get_flag("cave_triggered")
-                and not self.get_flag("monster_boarded")
-                and self.board_countdown is None
-                and self.current_room_id not in TOXIC_ROOMS
-                and self.turn_count > 0
-                and self.monster.turns_since_seen > 18):
+        if (
+            self.get_flag("cave_triggered")
+            and not self.get_flag("monster_boarded")
+            and self.board_countdown is None
+            and self.current_room_id not in TOXIC_ROOMS
+            and self.turn_count > 0
+            and self.monster.turns_since_seen > 18
+        ):
             self.board_countdown = 1
 
         if self.board_countdown is not None and not self.get_flag("monster_boarded"):
@@ -301,9 +315,11 @@ class GameState:
                 # chase: you move away from it toward the parts, not into it.
                 spawn = "airlock" if self.get_flag("returned_after_cave") else self._distant_spawn()
                 self.board_monster(spawn)
-                msgs.append("Far down the ship, something knocks. Once. Soft.\n"
-                            "Then three soft tones — the beacon's call, answered from inside.\n\n"
-                            "It came in with you.")
+                msgs.append(
+                    "Far down the ship, something knocks. Once. Soft.\n"
+                    "Then three soft tones — the beacon's call, answered from inside.\n\n"
+                    "It came in with you."
+                )
         # Count turns since "seen" grows while dormant (used by failsafe).
         if not self.get_flag("monster_boarded"):
             self.monster.turns_since_seen += 1
@@ -321,6 +337,7 @@ class GameState:
 
     def _apply_sound_to_monster(self):
         """Translate the player's last action sound into suspicion."""
+        assert self.player is not None
         m = self.monster
         sound = self.last_action_sound
         proom = self.current_room_id
@@ -353,6 +370,7 @@ class GameState:
             m.add_suspicion(proom, 1)
 
     def _update_aggression(self):
+        assert self.player is not None
         m = self.monster
         if self.game_phase == "final_repair":
             m.aggression = 3
@@ -385,8 +403,7 @@ class GameState:
         # vague enough to dodge. Staying quiet keeps it guessing.
         if m.known_hide_room and m.known_hide_room in self.rooms and self.rng.random() < 0.35:
             return m.known_hide_room
-        if (not m.target_room_id or m.target_room_id not in self.rooms
-                or m.current_room_id == m.target_room_id):
+        if not m.target_room_id or m.target_room_id not in self.rooms or m.current_room_id == m.target_room_id:
             if self.rng.random() < 0.6:
                 m.target_room_id = self._random_room_near(self.current_room_id, 3)
             else:
@@ -395,8 +412,7 @@ class GameState:
 
     def _random_room_near(self, center, maxd):
         """A random room within maxd of center (its general quadrant)."""
-        pool = [rid for rid in self.rooms
-                if rid != center and (self.shortest_path(center, rid)[0] or 99) <= maxd]
+        pool = [rid for rid in self.rooms if rid != center and (self.shortest_path(center, rid)[0] or 99) <= maxd]
         return self.rng.choice(pool) if pool else self.rng.choice(list(self.rooms))
 
     def _move_monster(self):
@@ -421,8 +437,7 @@ class GameState:
         steps = 1
 
         # Vents are spice, not teleportation: only when agitated, and on a cooldown.
-        use_vents = (m.can_use_vents and m.vent_cooldown == 0
-                     and (m.aggression >= 2 or self.last_action_sound >= 3))
+        use_vents = m.can_use_vents and m.vent_cooldown == 0 and (m.aggression >= 2 or self.last_action_sound >= 3)
         for _ in range(steps):
             if m.current_room_id == target:
                 break
@@ -472,9 +487,9 @@ class GameState:
         dist, _ = self.shortest_path(self.current_room_id, m.current_room_id)
         fresh = 0.85
         if dist is not None and dist <= 1:
-            fresh = 0.5                      # the signal panics when it's on top of you
+            fresh = 0.5  # the signal panics when it's on top of you
         if self.player.type == "synthetic":
-            fresh = min(1.0, fresh + 0.15)   # crisper optics
+            fresh = min(1.0, fresh + 0.15)  # crisper optics
         if self.rng.random() < fresh:
             m.tracked_room_id = m.current_room_id
         # else: keep the previous belief — a one-turn lie.
@@ -491,6 +506,7 @@ class GameState:
     def _sable_saves(self):
         """If Sable is following and hasn't been spent, it dies in your place.
         Returns the rescue text, or None if Sable can't help."""
+        assert self.player is not None
         if not (self.get_flag("sable_following") and not self.get_flag("sable_sacrifice_used")):
             return None
         self.set_flag("sable_sacrifice_used", True)
@@ -506,13 +522,16 @@ class GameState:
         # The feeding buys you a few turns.
         self.monster.set_distracted(self.turn_count + 3)
         self.monster.state = "feeding"
-        return ("Sable moves before you can — it has done this before.\n"
-                "It sets itself between you and the dark.\n\n"
-                "\"The order says save the specimen,\" it says. \"The order is wrong. Go.\"\n\n"
-                "The hatch closes before the sound begins.")
+        return (
+            "Sable moves before you can — it has done this before.\n"
+            "It sets itself between you and the dark.\n\n"
+            '"The order says save the specimen," it says. "The order is wrong. Go."\n\n'
+            "The hatch closes before the sound begins."
+        )
 
     def _resolve_same_room(self):
         """The monster is in the player's room. Decide what happens."""
+        assert self.player is not None
         m = self.monster
         if m.current_room_id != self.current_room_id:
             m.searching_streak = 0
@@ -541,8 +560,7 @@ class GameState:
         m.searching_streak += 1
         spot = self.player.hidden_spot or {"quality": 0, "reuse": 0}
         overstay = max(0, m.searching_streak - 1)
-        chance = (10 + self.last_action_sound * 25 + overstay * 20
-                  + spot.get("reuse", 0) * 8 - spot.get("quality", 0))
+        chance = 10 + self.last_action_sound * 25 + overstay * 20 + spot.get("reuse", 0) * 8 - spot.get("quality", 0)
         chance = max(4, min(chance, 96))
         roll = self.rng.randint(1, 100)
         if roll <= chance:
@@ -557,6 +575,8 @@ class GameState:
             m.known_hide_room = None
         m.target_room_id = None
         if spot.get("reuse", 0) >= 2:
-            return (f"It goes straight to the {spot['name']}. It is learning your habits.\n"
-                    "Its attention passes over you. This time.")
+            return (
+                f"It goes straight to the {spot['name']}. It is learning your habits.\n"
+                "Its attention passes over you. This time."
+            )
         return "It is in the room with you.\nIt checks the wrong place. Slowly. Then moves on."

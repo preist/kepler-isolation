@@ -18,7 +18,7 @@ def make_engine(role="1", seed=0):
 
 def test_submit_moves_and_reports():
     e = make_engine()
-    r = e.submit("south")            # cockpit -> central_corridor
+    r = e.submit("south")  # cockpit -> central_corridor
     assert e.location_name == "Central Corridor"
     assert r.room_changed
     assert not r.dead and not r.won
@@ -42,7 +42,7 @@ def test_panel_accessors():
 
 def test_motion_no_device_then_bearing():
     e = make_engine()
-    assert e.motion()["kind"] == "no_device"          # no terminal yet
+    assert e.motion()["kind"] == "no_device"  # no terminal yet
     e.gs.player.has_terminal = True
     e.gs.monster.active = True
     e.gs.monster.phase = "aboard"
@@ -67,7 +67,7 @@ def test_win_via_send():
 
 def test_toxic_death_result():
     e = make_engine("1")
-    e.gs.current_room_id = "surface"   # toxic, no suit
+    e.gs.current_room_id = "surface"  # toxic, no suit
     e.submit("wait")
     r = e.submit("wait")
     assert r.dead == "toxic"

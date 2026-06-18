@@ -82,7 +82,7 @@ def test_human_dies_on_second_toxic_turn():
     gs, _ = build_game("human")
     gs.current_room_id = "surface"
     gs.advance_world()
-    assert gs.death_state is None      # warning only
+    assert gs.death_state is None  # warning only
     gs.advance_world()
     assert gs.death_state == "toxic"
 
@@ -92,7 +92,7 @@ def test_synthetic_survives_longer():
     gs.current_room_id = "surface"
     gs.advance_world()
     gs.advance_world()
-    assert gs.death_state is None      # synthetic gets a third turn
+    assert gs.death_state is None  # synthetic gets a third turn
     gs.advance_world()
     assert gs.death_state == "toxic"
 
@@ -195,8 +195,8 @@ def test_sable_sacrifice_prevents_one_death(game):
     gs.set_flag("sable_following", True)
     gs.set_flag("sable_alive", True)
 
-    msg = gs._resolve_same_room()           # would be a kill
-    assert gs.death_state is None           # Sable takes it instead
+    gs._resolve_same_room()  # would be a kill; Sable intercepts
+    assert gs.death_state is None  # Sable takes it instead
     assert gs.get_flag("sable_sacrifice_used") is True
     assert gs.current_room_id != "central_corridor"  # pushed to safety
 
@@ -247,6 +247,7 @@ def test_repair_requires_all_parts(game):
 
 def test_save_load_roundtrip(game, tmp_path):
     import save
+
     gs, parser = game
     parser.parse_command("take hand terminal")
     parser.parse_command("south")

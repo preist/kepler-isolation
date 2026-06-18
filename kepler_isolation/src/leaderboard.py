@@ -51,18 +51,24 @@ def insert(name: str, role: str, moves: int, scores: list) -> tuple:
     scores.sort(key=lambda e: e["moves"])
     scores = scores[:MAX_ENTRIES]
     _save(scores)
-    rank = next((i + 1 for i, e in enumerate(scores) if e["name"] == name
-                 and e["moves"] == moves and e["date"] == entry["date"]), None)
+    rank = next(
+        (
+            i + 1
+            for i, e in enumerate(scores)
+            if e["name"] == name and e["moves"] == moves and e["date"] == entry["date"]
+        ),
+        None,
+    )
     return scores, rank
 
 
 def format_table(scores: list) -> list:
     """Return display lines for the leaderboard (no trailing newline)."""
     header = f"  {'#':>2}  {'NAME':<40}  {'MOVES':>5}  DATE"
-    sep    = "  " + "-" * (len(header) - 2)
+    sep = "  " + "-" * (len(header) - 2)
     if not scores:
         return [header, sep, "      (no scores yet)"]
     lines = [header, sep]
     for i, e in enumerate(scores):
-        lines.append(f"  {i+1:>2}  {e['name']:<40}  {e['moves']:>5}  {e['date']}")
+        lines.append(f"  {i + 1:>2}  {e['name']:<40}  {e['moves']:>5}  {e['date']}")
     return lines

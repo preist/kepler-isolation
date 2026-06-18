@@ -2,16 +2,15 @@
 Room class for KEPLER ISOLATION game
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys
 
-from item import Item
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 class Room:
     def __init__(self, name: str, description: str, items: list, exits: dict, hidden_items: list):
-        self.id = None  # Will be set by the map builder
+        self.id: str | None = None  # set by map_builder after construction
         self.name = name
         self.description = description
         self.items = items
@@ -28,9 +27,9 @@ class Room:
         # Hiding spots: list of dicts {"name", "quality", "reuse"}
         self.hiding_spots = []
         self.monster_allowed = True
-        self.toxic = False                # lethal atmosphere if not wearing a suit
+        self.toxic = False  # lethal atmosphere if not wearing a suit
         self.scanner_interference = False  # scanner is unreliable here
-        self.ambient_sound = 0            # 0 silent .. 3 loud; masks/echoes player sound
+        self.ambient_sound = 0  # 0 silent .. 3 loud; masks/echoes player sound
         self.visited = False
 
     def describe(self, game_state) -> str:
@@ -58,7 +57,7 @@ class Room:
             return True
         return False
 
-    def find_hiding_spot(self, name: str = None):
+    def find_hiding_spot(self, name: str | None = None):
         """Return a hiding spot dict. If name is given, match it; otherwise pick
         the highest-quality spot available."""
         if not self.hiding_spots:

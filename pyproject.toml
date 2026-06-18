@@ -1,0 +1,35 @@
+[project]
+name = "kepler-isolation"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "A terminal survival-horror text adventure."
+
+[project.optional-dependencies]
+tui = ["textual>=0.60"]
+dev = ["ruff", "pyright", "pytest"]
+
+# ── Formatter + linter (ruff replaces black + isort + flake8) ─────────────────
+[tool.ruff]
+line-length = 120
+src = ["kepler_isolation/src", "kepler_isolation/tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP"]
+ignore = [
+    "E501",   # long narrative strings can't be auto-wrapped; formatter handles code
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["engine", "game_state", "map_builder", "parser", "player",
+                     "room", "item", "monster", "save", "tui", "leaderboard"]
+
+# ── Type checker ──────────────────────────────────────────────────────────────
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+include = ["kepler_isolation/src"]
+
+# ── Test runner ───────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["kepler_isolation/tests"]
+pythonpath = ["kepler_isolation/src"]

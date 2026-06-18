@@ -6,12 +6,13 @@ sound cost of the action, and flags whether the action advances time. The main
 loop runs the world simulation afterwards.
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from typing import List
-from game_state import GameState, SOUND_LABELS, TOXIC_ROOMS
+from game_state import TOXIC_ROOMS, GameState
+from player import Player
 
 # Words we can safely drop from an argument. Deliberately excludes the
 # direction words (in/out/up/down) — "crawl down" and "run in" need them.
@@ -25,18 +26,29 @@ class Parser:
         self.game_state = game_state
 
         self.aliases = {
-            "n": "north", "s": "south", "e": "east", "w": "west",
-            "u": "up", "d": "down",
-            "x": "examine", "exam": "examine",
-            "get": "take", "grab": "take", "pick": "take",
-            "i": "inventory", "inv": "inventory",
+            "n": "north",
+            "s": "south",
+            "e": "east",
+            "w": "west",
+            "u": "up",
+            "d": "down",
+            "x": "examine",
+            "exam": "examine",
+            "get": "take",
+            "grab": "take",
+            "pick": "take",
+            "i": "inventory",
+            "inv": "inventory",
             "l": "look",
-            "exit": "quit", "q": "quit",
-            "transmit": "send", "fix": "repair",
+            "exit": "quit",
+            "q": "quit",
+            "transmit": "send",
+            "fix": "repair",
         }
 
     @property
-    def player(self):
+    def player(self) -> Player:
+        assert self.game_state.player is not None, "parser used before new_game()"
         return self.game_state.player
 
     # ------------------------------------------------------------------ #
@@ -161,12 +173,12 @@ class Parser:
     def handle_movement(self, direction: str) -> str:
         return self._move_to(direction, 1, "You walk")
 
-    def handle_crawl(self, words: List[str]) -> str:
+    def handle_crawl(self, words: list[str]) -> str:
         if not words:
             return "Crawl where?"
         return self._move_to(words[0], 0, "You crawl")
 
-    def handle_run(self, words: List[str]) -> str:
+    def handle_run(self, words: list[str]) -> str:
         if not words:
             return "Run where?"
         direction = words[0]
@@ -189,7 +201,7 @@ class Parser:
             out.append("Items: " + ", ".join(i.name for i in room.items))
         return "\n".join(out)
 
-    def handle_examine(self, words: List[str]) -> str:
+    def handle_examine(self, words: list[str]) -> str:
         if not words:
             return "Examine what?"
         name = " ".join(words)
@@ -209,18 +221,16 @@ class Parser:
         # A couple of fixed features.
         if name in ("transmitter", "console") and self.game_state.current_room_id == "communications":
             self.game_state.set_flag("comms_damaged_known", True)
-            return ("The transmitter is dead. Three sockets gape open:\n"
-                    "power coupler, signal relay, antenna key.")
+            return "The transmitter is dead. Three sockets gape open:\npower coupler, signal relay, antenna key."
         self._meta()
         return f"You see no {name} here."
 
-    def handle_read(self, words: List[str]) -> str:
+    def handle_read(self, words: list[str]) -> str:
         if not words:
             return "Read what?"
         name = " ".join(words)
         self._act(1)
-        for item in (self.game_state.current_room.items
-                     + self.player.inventory + self.player.worn_items):
+        for item in self.game_state.current_room.items + self.player.inventory + self.player.worn_items:
             if item.matches_name(name) and item.readable_text:
                 return item.readable_text
         self._meta()
@@ -238,20 +248,26 @@ class Parser:
                 return "Something moves nearby. Close, and in no hurry."
             return "The ship settling. Maybe. You decide to believe that."
         if gs.current_room_id in TOXIC_ROOMS:
-            return gs.rng.choice([
-                "Wind over the dust. Your own breath, loud in the helmet.",
-                "The signal, under everything. Not a voice. Almost a voice.",
-            ])
+            return gs.rng.choice(
+                [
+                    "Wind over the dust. Your own breath, loud in the helmet.",
+                    "The signal, under everything. Not a voice. Almost a voice.",
+                ]
+            )
         if gs.get_flag("cave_triggered"):
-            return gs.rng.choice([
-                "The hum of the ship. And under it, something you can't place.",
-                "Quiet. The kind that arrives after a sound, not before one.",
-            ])
-        return gs.rng.choice([
-            "Only the hum of the ship. Pairs of lights, ticking warm.",
-            "A drip, somewhere. The recyclers. Probably the recyclers.",
-            "Nothing. The good kind, for now.",
-        ])
+            return gs.rng.choice(
+                [
+                    "The hum of the ship. And under it, something you can't place.",
+                    "Quiet. The kind that arrives after a sound, not before one.",
+                ]
+            )
+        return gs.rng.choice(
+            [
+                "Only the hum of the ship. Pairs of lights, ticking warm.",
+                "A drip, somewhere. The recyclers. Probably the recyclers.",
+                "Nothing. The good kind, for now.",
+            ]
+        )
 
     def handle_sable(self) -> str:
         gs = self.game_state
@@ -269,14 +285,16 @@ class Parser:
         gs.set_flag("sable_alive", True)
         gs.set_flag("sable_following", True)
         self._act(1)
-        return ('The synthetic\'s eyes find you. "Sable. I came down with the last crew."\n'
-                '"I watched it learn the doors. Then the names. Stay quiet. Keep moving."\n'
-                "Sable rises and falls into step behind you.")
+        return (
+            'The synthetic\'s eyes find you. "Sable. I came down with the last crew."\n'
+            '"I watched it learn the doors. Then the names. Stay quiet. Keep moving."\n'
+            "Sable rises and falls into step behind you."
+        )
 
     # ------------------------------------------------------------------ #
     # Inventory / items
     # ------------------------------------------------------------------ #
-    def handle_take(self, words: List[str]) -> str:
+    def handle_take(self, words: list[str]) -> str:
         if not words:
             return "Take what?"
         name = " ".join(words)
@@ -296,7 +314,7 @@ class Parser:
         self._meta()
         return f"You see no {name} here."
 
-    def handle_drop(self, words: List[str]) -> str:
+    def handle_drop(self, words: list[str]) -> str:
         if not words:
             return "Drop what?"
         name = " ".join(words)
@@ -320,7 +338,7 @@ class Parser:
             lines.append(f"  - {item.name} (worn)")
         return "\n".join(lines)
 
-    def handle_wear(self, words: List[str]) -> str:
+    def handle_wear(self, words: list[str]) -> str:
         if not words:
             return "Wear what?"
         name = " ".join(words)
@@ -353,7 +371,7 @@ class Parser:
         self._act(2)
         return "The seals close around your throat.\nSuit pressure holds."
 
-    def handle_remove(self, words: List[str]) -> str:
+    def handle_remove(self, words: list[str]) -> str:
         if not words:
             return "Remove what?"
         name = " ".join(words)
@@ -372,7 +390,7 @@ class Parser:
         self._meta()
         return f"You're not wearing {name}."
 
-    def handle_use(self, words: List[str]) -> str:
+    def handle_use(self, words: list[str]) -> str:
         if not words:
             return "Use what?"
         name = " ".join(words)
@@ -436,7 +454,7 @@ class Parser:
     # ------------------------------------------------------------------ #
     # Hiding / distraction
     # ------------------------------------------------------------------ #
-    def handle_hide(self, words: List[str]) -> str:
+    def handle_hide(self, words: list[str]) -> str:
         room = self.game_state.current_room
         if not room.hiding_spots:
             self._meta()
@@ -458,7 +476,7 @@ class Parser:
             return f"You take cover again — {spot['name']}.\nThe same hiding place feels smaller now."
         return f"You take cover — {spot['name']}. You go still."
 
-    def handle_throw(self, words: List[str]) -> str:
+    def handle_throw(self, words: list[str]) -> str:
         if not words:
             return "Throw what?"
         # Allow "throw can east".
@@ -490,8 +508,7 @@ class Parser:
                 m.add_suspicion(target, 8)
                 m.set_distracted(gs.turn_count + 2)
                 return f"The {item.name} clatters away {direction}. Something shifts toward the sound."
-            return (f"The {item.name} clatters away {direction}.\n"
-                    "It glances toward the noise. It does not turn.")
+            return f"The {item.name} clatters away {direction}.\nIt glances toward the noise. It does not turn."
         # No direction: just noise where you are. Loud, and a mistake.
         self._act(3)
         return f"The {item.name} clatters across the floor. Loud. Too loud."
@@ -499,7 +516,7 @@ class Parser:
     # ------------------------------------------------------------------ #
     # Repair / win
     # ------------------------------------------------------------------ #
-    def handle_install(self, words: List[str]) -> str:
+    def handle_install(self, words: list[str]) -> str:
         if self.game_state.current_room_id != "communications":
             self._meta()
             return "There is nothing to install here."
@@ -525,14 +542,16 @@ class Parser:
         tail = "" if left == 0 else f" {left} socket{'s' if left != 1 else ''} still open."
         return f"The {item.name} seats with a click.{tail}"
 
-    def handle_repair(self, words: List[str]) -> str:
+    def handle_repair(self, words: list[str]) -> str:
         if self.game_state.current_room_id != "communications":
             self._meta()
             return "There is nothing here to repair."
         # Auto-install any carried parts, to be forgiving.
-        for part, attr in (("power coupler", "has_power_coupler"),
-                           ("signal relay", "has_signal_relay"),
-                           ("antenna key", "has_antenna_key")):
+        for part, attr in (
+            ("power coupler", "has_power_coupler"),
+            ("signal relay", "has_signal_relay"),
+            ("antenna key", "has_antenna_key"),
+        ):
             item = self.player.has_item(part)
             if item:
                 setattr(self.player, attr, True)
@@ -551,10 +570,12 @@ class Parser:
         self.game_state.set_flag("transmitter_repaired", True)
         self.game_state.game_phase = "final_repair"
         self._act(3)  # loud — draws the monster
-        return ("You force the panel shut. Current sings through the transmitter.\n\n"
-                "TRANSMISSION READY.\nMessage? (type: send <your message>)")
+        return (
+            "You force the panel shut. Current sings through the transmitter.\n\n"
+            "TRANSMISSION READY.\nMessage? (type: send <your message>)"
+        )
 
-    def handle_send(self, words: List[str]) -> str:
+    def handle_send(self, words: list[str]) -> str:
         if not self.player.transmitter_repaired:
             self._meta()
             if self.game_state.current_room_id != "communications":
@@ -567,7 +588,7 @@ class Parser:
         return "You key the transmitter."
 
     # ------------------------------------------------------------------ #
-    def handle_open(self, words: List[str]) -> str:
+    def handle_open(self, words: list[str]) -> str:
         self._act(2)
         return "It opens. Nothing useful inside."
 
@@ -585,11 +606,13 @@ class Parser:
     def handle_save(self) -> str:
         self._meta()
         import save
+
         return "Saved." if save.save_game(self.game_state) else "Could not write the save."
 
     def handle_load(self) -> str:
         self._meta()
         import save
+
         if save.load_game(self.game_state):
             return "Loaded. You are back in the " + self.game_state.current_room.name + "."
         return "No save found."
