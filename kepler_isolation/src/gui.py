@@ -762,10 +762,24 @@ class KeplerGUI(QMainWindow):
 # Entry point
 # ---------------------------------------------------------------------------
 def run() -> None:
+    # Set the name BEFORE constructing QApplication — Qt registers it with the
+    # macOS system app menu at construction time; setting it afterwards is too late.
+    APP_NAME = "Kepler Isolation"
+    QApplication.setApplicationName(APP_NAME)
+
     app: QApplication = QApplication.instance() or QApplication(sys.argv)  # type: ignore[assignment]
-    app.setApplicationName("KEPLER ISOLATION")
-    # Apply monospace as the application-wide default — every widget inherits it
-    # unless overridden, giving a consistent terminal vibe throughout.
+
+    # On macOS, patch CFBundleName so the system app menu title matches.
+    # PyObjC ships with macOS and is available in most Python environments.
+    try:
+        from Foundation import NSBundle  # type: ignore[import-not-found]
+
+        info = NSBundle.mainBundle().infoDictionary()
+        if info is not None:
+            info["CFBundleName"] = APP_NAME
+    except Exception:
+        pass
+
     mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
     mono.setPointSize(11)
     app.setFont(mono)
