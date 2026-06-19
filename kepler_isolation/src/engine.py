@@ -273,6 +273,16 @@ class GameEngine:
         life_num = gs.lives_used + 1  # e.g. 2 of 3
         divider = "─" * 58
 
+        # Monster status — world state is preserved; cryo section is sealed.
+        m = gs.monster
+        if m.active and m.current_room_id:
+            mroom = gs.rooms.get(m.current_room_id)
+            monster_note = (
+                f"The organism is still aboard. Last confirmed position: {mroom.name if mroom else 'unknown'}."
+            )
+        else:
+            monster_note = "The organism is still aboard."
+
         lines = death_lines + [
             "",
             divider,
@@ -296,6 +306,9 @@ class GameEngine:
             ROLE_FLAVOR[next_char["type"]],
             "",
             f"You are {next_char['name']}.",
+            "",
+            monster_note,
+            "The cryo section is sealed. It cannot follow you here.",
             "",
             f"Somewhere on this ship — in {death_room_name} —",
             f"there is a body that answers to {prev['name']}.",
