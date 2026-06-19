@@ -656,8 +656,7 @@ class KeplerGUI(QMainWindow):
             self._w("")
             self._w_rule()
             self._w(
-                f"You now play as {new_player.name}.  "
-                f"{lives_left} {'life' if lives_left == 1 else 'lives'} remaining.",
+                f"You now play as {new_player.name}.  {lives_left} {'life' if lives_left == 1 else 'lives'} remaining.",
                 color=_AMBER,
                 bold=True,
             )
