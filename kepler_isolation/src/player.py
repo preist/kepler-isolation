@@ -32,11 +32,11 @@ class Player:
         # Scanner + mission flags
         self.has_terminal = False
         # Radio mission: collect 4 components, craft in C13, install and transmit in A07
-        self.has_coil = False        # transmitter coil (A07)
-        self.has_crystal = False     # signal crystal (D09)
-        self.has_regulator = False   # power regulator (F08)
-        self.has_coupler = False     # antenna coupler (G11)
-        self.radio_built = False     # improvised radio assembled at C13
+        self.has_coil = False  # transmitter coil (A07)
+        self.has_crystal = False  # signal crystal (D09)
+        self.has_regulator = False  # power regulator (F08)
+        self.has_coupler = False  # antenna coupler (G11)
+        self.radio_built = False  # improvised radio assembled at C13
 
     @property
     def toxic_tolerance(self) -> int:

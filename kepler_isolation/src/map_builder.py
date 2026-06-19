@@ -22,21 +22,24 @@ SAFE_HAVEN_AIRLOCKS = {"c05", "c06", "c07", "c08"}
 
 # Rooms with heavy scanner interference.
 SCANNER_INTERFERENCE_ROOMS = {
-    "f10", "f11", "f12",   # reactor zone
-    "f08",                  # power distribution (heat bloom)
-    "g02", "g03",           # cargo bays (dense metal)
+    "f10",
+    "f11",
+    "f12",  # reactor zone
+    "f08",  # power distribution (heat bloom)
+    "g02",
+    "g03",  # cargo bays (dense metal)
 }
 
 # Ambient sound levels (0 = silent, 3 = loud).
 AMBIENT_SOUND = {
-    "f09": 3,   # generator room — deafening when running
-    "f11": 3,   # reactor chamber — constant roar
-    "f08": 2,   # power distribution — hum and sparks
-    "f12": 2,   # coolant control — pipes and pressure
-    "g02": 2,   # cargo bay A — chains, echo
-    "g03": 2,   # cargo bay B
-    "e06": 1,   # cafeteria — vents, faint hum
-    "e07": 1,   # kitchen — refrigeration units
+    "f09": 3,  # generator room — deafening when running
+    "f11": 3,  # reactor chamber — constant roar
+    "f08": 2,  # power distribution — hum and sparks
+    "f12": 2,  # coolant control — pipes and pressure
+    "g02": 2,  # cargo bay A — chains, echo
+    "g03": 2,  # cargo bay B
+    "e06": 1,  # cafeteria — vents, faint hum
+    "e07": 1,  # kitchen — refrigeration units
 }
 
 # room_id -> list of hiding spots
@@ -72,10 +75,10 @@ CAPTAIN_NOTE = (
 )
 
 RECORDER_LOG = (
-    '"—don\'t transmit. Whatever you do, don\'t answer it."\n'
+    "\"—don't transmit. Whatever you do, don't answer it.\"\n"
     "A long pause. Then, quieter:\n"
     '"It learned the signal. It\'s using the signal now."\n'
-    '"I can\'t hear it anymore. It\'s in the walls."'
+    "\"I can't hear it anymore. It's in the walls.\""
 )
 
 COMPANY_MEMO = (
@@ -550,8 +553,7 @@ def create_rooms() -> dict:
             Item(
                 "company memo",
                 "memo,paper,letter",
-                "A Halloway-Tanaka directive, printed on real paper.\n"
-                "Someone wanted it deniable.",
+                "A Halloway-Tanaka directive, printed on real paper.\nSomeone wanted it deniable.",
                 portable=True,
                 readable_text=COMPANY_MEMO,
             ),
@@ -1152,8 +1154,7 @@ def create_rooms() -> dict:
             Item(
                 "power regulator",
                 "regulator,component",
-                "A power regulation unit, company-grey. Precision-built.\n"
-                "Surplus to the generator's requirements.",
+                "A power regulation unit, company-grey. Precision-built.\nSurplus to the generator's requirements.",
                 portable=True,
                 required_for_win=True,
             ),
@@ -1364,8 +1365,7 @@ def create_rooms() -> dict:
             Item(
                 "antenna coupler",
                 "coupler,antenna",
-                "An antenna coupling unit from the beacon array.\n"
-                "It was designed to transmit. It still can.",
+                "An antenna coupling unit from the beacon array.\nIt was designed to transmit. It still can.",
                 portable=True,
                 required_for_win=True,
             ),
@@ -1391,166 +1391,240 @@ def create_rooms() -> dict:
         rooms[rid] = r
 
     # Forward section — Zones A-B
-    mroom("m01", "Forward Maintenance Shaft",
-        "A low crawlway behind the forward sensor panels.\n"
-        "Service lights only. The panels tick and hum.",
-        {"east": "a02", "south": "a05", "west": "m03"})
+    mroom(
+        "m01",
+        "Forward Maintenance Shaft",
+        "A low crawlway behind the forward sensor panels.\nService lights only. The panels tick and hum.",
+        {"east": "a02", "south": "a05", "west": "m03"},
+    )
 
-    mroom("m02", "Bridge Access Shaft",
-        "A vertical service ladder beneath the bridge deck.\n"
-        "Grease on the rungs. Fresh.",
-        {"up": "a04", "east": "m03"})
+    mroom(
+        "m02",
+        "Bridge Access Shaft",
+        "A vertical service ladder beneath the bridge deck.\nGrease on the rungs. Fresh.",
+        {"up": "a04", "east": "m03"},
+    )
 
-    mroom("m03", "Forward Hub",
+    mroom(
+        "m03",
+        "Forward Hub",
         "A wider junction where three maintenance shafts meet.\n"
         "Old inspection tags on the wall. The most recent is missing its date.",
-        {"east": "m01", "west": "m02", "north": "m04", "south": "a07"})
+        {"east": "m01", "west": "m02", "north": "m04", "south": "a07"},
+    )
 
-    mroom("m04", "Security Access Shaft",
-        "A shaft running through the security block.\n"
-        "Two panel covers have been removed and not replaced.",
-        {"south": "m03", "down": "b02", "east": "b03", "north": "m05"})
+    mroom(
+        "m04",
+        "Security Access Shaft",
+        "A shaft running through the security block.\nTwo panel covers have been removed and not replaced.",
+        {"south": "m03", "down": "b02", "east": "b03", "north": "m05"},
+    )
 
-    mroom("m05", "Security Branch",
-        "A side branch off the security shaft.\n"
-        "Scratches on the floor. Something heavy was dragged through here.",
-        {"south": "m04", "up": "b04", "east": "b05"})
+    mroom(
+        "m05",
+        "Security Branch",
+        "A side branch off the security shaft.\nScratches on the floor. Something heavy was dragged through here.",
+        {"south": "m04", "up": "b04", "east": "b05"},
+    )
 
     # Cryo section — Zone C
-    mroom("m06", "Cryo North Shaft",
-        "The maintenance passage behind the north cryo airlock.\n"
-        "The seals on this side are intact. Just.",
-        {"east": "c05", "south": "m10"})
+    mroom(
+        "m06",
+        "Cryo North Shaft",
+        "The maintenance passage behind the north cryo airlock.\nThe seals on this side are intact. Just.",
+        {"east": "c05", "south": "m10"},
+    )
 
-    mroom("m07", "Cryo East Shaft",
-        "Behind the east airlock. The hum of the cryo systems is louder here.\n"
-        "Frost forms at the panel seams.",
-        {"west": "c06", "east": "m10"})
+    mroom(
+        "m07",
+        "Cryo East Shaft",
+        "Behind the east airlock. The hum of the cryo systems is louder here.\nFrost forms at the panel seams.",
+        {"west": "c06", "east": "m10"},
+    )
 
-    mroom("m08", "Cryo South Shaft",
-        "The maintenance passage behind the south airlock.\n"
-        "A panel has been forced — from the outside.",
-        {"east": "c07", "north": "m10"})
+    mroom(
+        "m08",
+        "Cryo South Shaft",
+        "The maintenance passage behind the south airlock.\nA panel has been forced — from the outside.",
+        {"east": "c07", "north": "m10"},
+    )
 
-    mroom("m09", "Cryo West Shaft",
-        "Behind the west airlock. The narrowest of the cryo shafts.\n"
-        "Something has left a mark at waist height.",
-        {"east": "c08", "in": "m10"})
+    mroom(
+        "m09",
+        "Cryo West Shaft",
+        "Behind the west airlock. The narrowest of the cryo shafts.\nSomething has left a mark at waist height.",
+        {"east": "c08", "in": "m10"},
+    )
 
-    mroom("m10", "Cryo Maintenance Hub",
+    mroom(
+        "m10",
+        "Cryo Maintenance Hub",
         "A wider space connecting all four cryo airlock shafts.\n"
         "The air is cold enough that your breath shows.\n"
         "An access panel in the ceiling. Unlatched.",
-        {"north": "m06", "west": "m07", "south": "m08", "out": "m09",
-         "up": "c12", "east": "m11"})
+        {"north": "m06", "west": "m07", "south": "m08", "out": "m09", "up": "c12", "east": "m11"},
+    )
 
     # Medical/Science section — Zone D
-    mroom("m11", "Medical Maintenance Junction",
+    mroom(
+        "m11",
+        "Medical Maintenance Junction",
         "Where the cryo shafts meet the medical access.\n"
         "A junction box on the wall is open. Someone was in here recently.",
-        {"west": "m10", "north": "d03", "south": "d04", "east": "m12"})
+        {"west": "m10", "north": "d03", "south": "d04", "east": "m12"},
+    )
 
-    mroom("m12", "Medical Spine",
+    mroom(
+        "m12",
+        "Medical Spine",
         "A long maintenance corridor running behind the medical rooms.\n"
         "Emergency lighting only. Everything smells of antiseptic.",
-        {"west": "m11", "east": "d04", "south": "m13"})
+        {"west": "m11", "east": "d04", "south": "m13"},
+    )
 
-    mroom("m13", "Medical/Hab Junction",
+    mroom(
+        "m13",
+        "Medical/Hab Junction",
         "Where the medical maintenance shaft branches toward habitation.\n"
         "Three directions, all dark. A locker on the wall, empty.",
-        {"north": "m12", "east": "d06", "south": "m17"})
+        {"north": "m12", "east": "d06", "south": "m17"},
+    )
 
-    mroom("m14", "Science Upper Shaft",
-        "A shaft running above the science labs.\n"
-        "The floor vibrates faintly — analysis equipment below.",
-        {"down": "d08", "west": "d09", "south": "m15"})
+    mroom(
+        "m14",
+        "Science Upper Shaft",
+        "A shaft running above the science labs.\nThe floor vibrates faintly — analysis equipment below.",
+        {"down": "d08", "west": "d09", "south": "m15"},
+    )
 
-    mroom("m15", "Science Mid-Shaft",
-        "Mid-level maintenance between the science labs.\n"
-        "Sample containment warnings on stickers. All expired.",
-        {"north": "m14", "down": "d11", "south": "m16"})
+    mroom(
+        "m15",
+        "Science Mid-Shaft",
+        "Mid-level maintenance between the science labs.\nSample containment warnings on stickers. All expired.",
+        {"north": "m14", "down": "d11", "south": "m16"},
+    )
 
-    mroom("m16", "Science Lower Shaft",
+    mroom(
+        "m16",
+        "Science Lower Shaft",
         "The lowest science maintenance space, near the quarantine chamber.\n"
         "The air pressure feels wrong. Slightly off.",
-        {"north": "m15", "up": "d12", "east": "m18"})
+        {"north": "m15", "up": "d12", "east": "m18"},
+    )
 
     # Habitation section — Zone E
-    mroom("m17", "West Hab Shaft",
+    mroom(
+        "m17",
+        "West Hab Shaft",
         "A maintenance passage running behind the west residential block.\n"
         "Personal items stuffed into the crawlway. Someone tried to hide things here.",
-        {"north": "m13", "east": "e03", "south": "m19"})
+        {"north": "m13", "east": "e03", "south": "m19"},
+    )
 
-    mroom("m18", "East Hab Shaft",
-        "Behind the east residential block. Narrow.\n"
-        "A boot print in the dust. Human-sized. Going south.",
-        {"west": "e12", "north": "m16", "south": "m19"})
+    mroom(
+        "m18",
+        "East Hab Shaft",
+        "Behind the east residential block. Narrow.\nA boot print in the dust. Human-sized. Going south.",
+        {"west": "e12", "north": "m16", "south": "m19"},
+    )
 
-    mroom("m19", "Hab Maintenance Hub",
+    mroom(
+        "m19",
+        "Hab Maintenance Hub",
         "The central maintenance hub for the habitation deck.\n"
         "Five shafts branch from here. In the dark, they all look the same.",
-        {"north": "m17", "west": "m18", "east": "m20", "south": "m22", "out": "e05"})
+        {"north": "m17", "west": "m18", "east": "m20", "south": "m22", "out": "e05"},
+    )
 
-    mroom("m20", "Kitchen Shaft",
+    mroom(
+        "m20",
+        "Kitchen Shaft",
         "Behind the cafeteria and kitchen.\n"
         "Warm here — the kitchen machinery keeps this shaft above ambient temperature.",
-        {"west": "m19", "up": "e07", "south": "m21"})
+        {"west": "m19", "up": "e07", "south": "m21"},
+    )
 
-    mroom("m21", "Freezer Shaft",
+    mroom(
+        "m21",
+        "Freezer Shaft",
         "Below the kitchen, near the freezer units.\n"
         "The cold comes through the wall. So does a smell you don't want to name.",
-        {"north": "m20", "up": "e08", "south": "m23"})
+        {"north": "m20", "up": "e08", "south": "m23"},
+    )
 
-    mroom("m22", "Chapel Shaft",
-        "Behind the chapel and lounge east.\n"
-        "Quiet here, even for a maintenance shaft.",
-        {"north": "m19", "up": "e09", "east": "m23"})
+    mroom(
+        "m22",
+        "Chapel Shaft",
+        "Behind the chapel and lounge east.\nQuiet here, even for a maintenance shaft.",
+        {"north": "m19", "up": "e09", "east": "m23"},
+    )
 
     # Engineering section — Zone F
-    mroom("m23", "Engineering Junction",
+    mroom(
+        "m23",
+        "Engineering Junction",
         "The maintenance hub for the engineering deck.\n"
         "Pipes everywhere, all labeled. The labels are covered in someone's handwriting:\n"
         "DO NOT RESTART. NO NO NO DO NOT RESTART.",
-        {"north": "m21", "west": "m22", "up": "f02", "south": "m24"})
+        {"north": "m21", "west": "m22", "up": "f02", "south": "m24"},
+    )
 
-    mroom("m24", "Processing Shaft",
-        "Behind the water and waste processing rooms.\n"
-        "The smell here has weight. You breathe through your mouth.",
-        {"north": "m23", "up": "f05", "south": "m25"})
+    mroom(
+        "m24",
+        "Processing Shaft",
+        "Behind the water and waste processing rooms.\nThe smell here has weight. You breathe through your mouth.",
+        {"north": "m23", "up": "f05", "south": "m25"},
+    )
 
-    mroom("m25", "Waste Shaft",
-        "Below the waste processing unit.\n"
-        "Running liquid somewhere behind the wall. Do not think about it.",
-        {"north": "m24", "up": "f06", "south": "m26"})
+    mroom(
+        "m25",
+        "Waste Shaft",
+        "Below the waste processing unit.\nRunning liquid somewhere behind the wall. Do not think about it.",
+        {"north": "m24", "up": "f06", "south": "m26"},
+    )
 
-    mroom("m26", "Power Shaft",
-        "Beneath the power distribution room.\n"
-        "The electrical noise here is a wall. Nothing reads cleanly.",
-        {"north": "m25", "up": "f08", "east": "m27"})
+    mroom(
+        "m26",
+        "Power Shaft",
+        "Beneath the power distribution room.\nThe electrical noise here is a wall. Nothing reads cleanly.",
+        {"north": "m25", "up": "f08", "east": "m27"},
+    )
     rooms["m26"].scanner_interference = True
 
-    mroom("m27", "Generator Shaft",
+    mroom(
+        "m27",
+        "Generator Shaft",
         "Below the generator room. When the generator runs, this shaft vibrates.\n"
         "Right now it is silent. That is worse.",
-        {"west": "m26", "up": "f09", "south": "m28"})
+        {"west": "m26", "up": "f09", "south": "m28"},
+    )
 
-    mroom("m28", "Reactor Access Shaft",
+    mroom(
+        "m28",
+        "Reactor Access Shaft",
         "The maintenance shaft beneath the reactor chamber.\n"
         "Heat radiates through the floor. Nobody stays longer than they have to.",
-        {"north": "m27", "up": "f11", "south": "m29"})
+        {"north": "m27", "up": "f11", "south": "m29"},
+    )
     rooms["m28"].ambient_sound = 2  # reactor vibration
 
     # Cargo section — Zone G
-    mroom("m29", "Cargo Access Hub",
+    mroom(
+        "m29",
+        "Cargo Access Hub",
         "Above the cargo bays. A junction with access down into both bays.\n"
         "Fresh scratch marks on the ceiling panel. Made from below.",
-        {"north": "m28", "south": "m30", "down": "g02", "in": "g03"})
+        {"north": "m28", "south": "m30", "down": "g02", "in": "g03"},
+    )
 
-    mroom("m30", "Docking Shaft",
+    mroom(
+        "m30",
+        "Docking Shaft",
         "The aft-most maintenance space, above the docking level.\n"
         "A panel opens into the escape pod corridor. Emergency access.\n"
         "Something has been through here — the grate is warm.",
-        {"north": "m29", "up": "g06", "out": "g08"})
+        {"north": "m29", "up": "g06", "out": "g08"},
+    )
 
     # ── Hidden exits from visible rooms into the M-network ────────────────────
     # (Entries listed in SHIP.md as "hidden" — the player finds them by exploring)
@@ -1607,33 +1681,24 @@ def create_rooms() -> dict:
 
     # ── "Aboard" variants — ship changes once the alien is confirmed active ───
     aboard = {
-        "a01": (
-            "The viewport. The dead planet below.\n"
-            "Your reflection in the glass is not in the right position."
-        ),
+        "a01": ("The viewport. The dead planet below.\nYour reflection in the glass is not in the right position."),
         "a02": (
-            "Instrument panels. The service hatch in the west wall is wider open than before.\n"
-            "You did not open it."
+            "Instrument panels. The service hatch in the west wall is wider open than before.\nYou did not open it."
         ),
         "a03": (
             "Navigation. The return course still unfiled.\n"
             "The plotted trajectory has been altered. You did not alter it."
         ),
-        "a04": (
-            "The bridge. All screens live.\n"
-            "The captain's chair is facing the wrong direction now. Slowly."
-        ),
+        "a04": ("The bridge. All screens live.\nThe captain's chair is facing the wrong direction now. Slowly."),
         "a05": (
-            "The ready room. The desk note, the keycard.\n"
-            "The photo on the desk is facing you now. Someone turned it."
+            "The ready room. The desk note, the keycard.\nThe photo on the desk is facing you now. Someone turned it."
         ),
         "a06": (
             "The comm array, dead. TRANSMISSION BLOCKED — DIRECTIVE 2.\n"
             "A sound from the east vent. Three soft taps. Then nothing."
         ),
         "a07": (
-            "The antenna control room. The three empty sockets.\n"
-            "The room behind you is breathing. In, and out, and in."
+            "The antenna control room. The three empty sockets.\nThe room behind you is breathing. In, and out, and in."
         ),
         "a08": (
             "The archive. The AI log cycling.\n"
@@ -1648,13 +1713,9 @@ def create_rooms() -> dict:
             "One feed shows a room you haven't left yet. The timestamp is wrong."
         ),
         "b03": (
-            "Surveillance theater. The two live screens.\n"
-            "The second screen no longer shows static. It shows this room."
+            "Surveillance theater. The two live screens.\nThe second screen no longer shows static. It shows this room."
         ),
-        "b04": (
-            "Armory. The empty racks. The remaining flares.\n"
-            "The ceiling vent is open. It was closed before."
-        ),
+        "b04": ("Armory. The empty racks. The remaining flares.\nThe ceiling vent is open. It was closed before."),
         "b05": (
             "The detention cell. The personal log on the bunk.\n"
             "The scratch marks on the door are deeper now. Made from the outside."
@@ -1675,10 +1736,7 @@ def create_rooms() -> dict:
             "South vestibule. The footprints in the dust.\n"
             "New footprints now — narrower, coming from the south, not human."
         ),
-        "c04": (
-            "West vestibule. The cracked defibrillator.\n"
-            "The sound of breathing from the corridor. Not yours."
-        ),
+        "c04": ("West vestibule. The cracked defibrillator.\nThe sound of breathing from the corridor. Not yours."),
         "d01": (
             "Medical reception. The plastic chairs. The triage clipboard.\n"
             "The pen on the clipboard is gone. The last name now has a line through it."
@@ -1699,38 +1757,19 @@ def create_rooms() -> dict:
             "Pharmacy. The forced cabinet, the bare shelves.\n"
             "The note on the door — TAKE WHAT YOU NEED — has been turned over."
         ),
-        "d06": (
-            "Morgue. The closed drawers. Drawer 7, labeled SPECIMEN.\n"
-            "Drawer 7 is ajar. You did not open it."
-        ),
-        "d07": (
-            "Science reception. The forced door.\n"
-            "The door is closed now. You don't remember closing it."
-        ),
-        "d08": (
-            "Materials lab. The sample log on the screen.\n"
-            "Sample 7's entry has been deleted. Recently."
-        ),
-        "d09": (
-            "Spectrometry lab. The running unit.\n"
-            "The running unit has changed its frequency scan without input."
-        ),
+        "d06": ("Morgue. The closed drawers. Drawer 7, labeled SPECIMEN.\nDrawer 7 is ajar. You did not open it."),
+        "d07": ("Science reception. The forced door.\nThe door is closed now. You don't remember closing it."),
+        "d08": ("Materials lab. The sample log on the screen.\nSample 7's entry has been deleted. Recently."),
+        "d09": ("Spectrometry lab. The running unit.\nThe running unit has changed its frequency scan without input."),
         "d10": (
             "Xenobiology lab. The empty sample cases. The whiteboard notes.\n"
             "New marks on the whiteboard. Not writing. Something else."
         ),
         "d11": (
-            "Specimen storage. Every container empty. The forced-open canister.\n"
-            "The canister is not where you left it."
+            "Specimen storage. Every container empty. The forced-open canister.\nThe canister is not where you left it."
         ),
-        "d12": (
-            "Quarantine chamber. The disabled lock.\n"
-            "The lock has been disabled from the other side now too."
-        ),
-        "e01": (
-            "Hab west corridor. Cabin doors open.\n"
-            "One cabin door is closed now. You did not close it."
-        ),
+        "d12": ("Quarantine chamber. The disabled lock.\nThe lock has been disabled from the other side now too."),
+        "e01": ("Hab west corridor. Cabin doors open.\nOne cabin door is closed now. You did not close it."),
         "e02": (
             "Crew quarters west. The bunks. The child's drawing.\n"
             "The drawing is face-down. The lockers have been gone through."
@@ -1756,32 +1795,23 @@ def create_rooms() -> dict:
             "The scanner is useless here. Whatever is in the room with you, it knows that."
         ),
         "e09": (
-            "Chapel. The folding chairs, the personal items.\n"
-            "One chair faces the door. It wasn't like that before."
+            "Chapel. The folding chairs, the personal items.\nOne chair faces the door. It wasn't like that before."
         ),
-        "e10": (
-            "Hab east corridor. The welded door.\n"
-            "The marks on the outside of the welded door are fresh."
-        ),
+        "e10": ("Hab east corridor. The welded door.\nThe marks on the outside of the welded door are fresh."),
         "e11": (
             "Crew quarters east. The unmade bunks. The boots under the window bunk.\n"
             "The boots have been moved. Not taken — just moved."
         ),
-        "e12": (
-            "Laundry east. The uniform caught in the drum door.\n"
-            "The uniform is gone. The drum door is closed."
-        ),
+        "e12": ("Laundry east. The uniform caught in the drum door.\nThe uniform is gone. The drum door is closed."),
         "e13": (
             "Lounge east. The pool table. HAPPY 40th, MERCER.\n"
             "The banner is on the floor. The pool cues are arranged differently."
         ),
         "e04": (
-            "Lounge west. The card game. The face-down hand.\n"
-            "The hand has been played. Someone finished the game."
+            "Lounge west. The card game. The face-down hand.\nThe hand has been played. Someone finished the game."
         ),
         "f01": (
-            "Industrial checkpoint. The yellow safety line.\n"
-            "Something has crossed it, back and forth, many times."
+            "Industrial checkpoint. The yellow safety line.\nSomething has crossed it, back and forth, many times."
         ),
         "f02": (
             "Fabrication bay. The idle CNC unit.\n"
@@ -1795,50 +1825,25 @@ def create_rooms() -> dict:
             "Environmental control. The humming systems.\n"
             "Airflow from the east vent has changed. Something is in the duct."
         ),
-        "f05": (
-            "Water processing. The loud pipe pressure.\n"
-            "A new sound under the pipes — movement, not mechanical."
-        ),
-        "f06": (
-            "Waste processing. Still running.\n"
-            "The replaced grate has been moved again. The gap is large enough."
-        ),
+        "f05": ("Water processing. The loud pipe pressure.\nA new sound under the pipes — movement, not mechanical."),
+        "f06": ("Waste processing. Still running.\nThe replaced grate has been moved again. The gap is large enough."),
         "f07": (
             "Engineering control. GENERATOR OFFLINE — MANUAL RESTART REQUIRED.\n"
             "The ship map overlay now shows a moving point on the deck. It is not you."
         ),
-        "f08": (
-            "Power distribution. The breaker panels.\n"
-            "A panel has been opened — not to sabotage. To observe."
-        ),
-        "f09": (
-            "Generator room. Silent or roaring.\n"
-            "The noise hides you. It hides everything else too."
-        ),
+        "f08": ("Power distribution. The breaker panels.\nA panel has been opened — not to sabotage. To observe."),
+        "f09": ("Generator room. Silent or roaring.\nThe noise hides you. It hides everything else too."),
         "f10": (
-            "Reactor monitoring. The authorization terminal.\n"
-            "The terminal has been accessed since you were last here."
+            "Reactor monitoring. The authorization terminal.\nThe terminal has been accessed since you were last here."
         ),
-        "f11": (
-            "Reactor chamber. The roar. The heat.\n"
-            "Something passes through here without caring about either."
-        ),
-        "f12": (
-            "Coolant control. The sweating pipes.\n"
-            "A handprint on the coolant tank. Not a human handprint."
-        ),
-        "g01": (
-            "Cargo spine. The swaying chain.\n"
-            "All the chains are moving now. The air is still."
-        ),
+        "f11": ("Reactor chamber. The roar. The heat.\nSomething passes through here without caring about either."),
+        "f12": ("Coolant control. The sweating pipes.\nA handprint on the coolant tank. Not a human handprint."),
+        "g01": ("Cargo spine. The swaying chain.\nAll the chains are moving now. The air is still."),
         "g02": (
             "Cargo bay A. The overhead track, disturbed grease.\n"
             "The grease marks continue over the stacked containers. It was up there."
         ),
-        "g03": (
-            "Cargo bay B. The shifted containers.\n"
-            "One container is open. The interior has been nested."
-        ),
+        "g03": ("Cargo bay B. The shifted containers.\nOne container is open. The interior has been nested."),
         "g04": (
             "Cargo sorting office. Sample 7 was here.\n"
             "The grimy office glass has a smear on the inside. From inside the office."
@@ -1848,8 +1853,7 @@ def create_rooms() -> dict:
             "The quarantine seal light is blinking. Something tested the outer door."
         ),
         "g06": (
-            "Main airlock. Both seals holding.\n"
-            "The scoring on the inner seal is new. It is testing from this side now."
+            "Main airlock. Both seals holding.\nThe scoring on the inner seal is new. It is testing from this side now."
         ),
         "g07": (
             "Pressure suit locker. The partial-suited body.\n"
@@ -1859,18 +1863,9 @@ def create_rooms() -> dict:
             "Escape pod corridor. One pod missing. Two remaining.\n"
             "The launch log has been accessed. The record has been deleted."
         ),
-        "g09": (
-            "Escape pod A. The launch button.\n"
-            "Leaving is possible. The question is what you leave behind."
-        ),
-        "g10": (
-            "Escape pod B. The smell of old fear.\n"
-            "New fear now. Yours. Sitting in the same seat."
-        ),
-        "g11": (
-            "Aft beacon service. Where it began.\n"
-            "You can feel the weight of the ship above you pressing down."
-        ),
+        "g09": ("Escape pod A. The launch button.\nLeaving is possible. The question is what you leave behind."),
+        "g10": ("Escape pod B. The smell of old fear.\nNew fear now. Yours. Sitting in the same seat."),
+        "g11": ("Aft beacon service. Where it began.\nYou can feel the weight of the ship above you pressing down."),
     }
 
     for room_id, text in aboard.items():

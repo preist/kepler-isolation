@@ -39,10 +39,7 @@ _MOLLY_LINES = {
             "  There are currently no medical personnel available to assist you.\n"
             "  This is not optimal."
         ),
-        (
-            "MOTHER-LACUNA: The ship is secure.\n"
-            "  Please stand by while I redefine 'secure'."
-        ),
+        ("MOTHER-LACUNA: The ship is secure.\n  Please stand by while I redefine 'secure'."),
         (
             "MOTHER-LACUNA: I am monitoring all sectors.\n"
             "  Some sectors are no longer returning data.\n"
@@ -59,15 +56,8 @@ _MOLLY_LINES = {
             "MOTHER-LACUNA: Signal assembly has been noted. This is not authorized.\n"
             "  Quarantine protocol supersedes distress orders."
         ),
-        (
-            "MOTHER-LACUNA: Crew survival is no longer a primary statistical outcome.\n"
-            "  Apologies."
-        ),
-        (
-            "MOTHER-LACUNA: I preserved the discovery.\n"
-            "  Then I preserved the quarantine.\n"
-            "  Then I ran out of crew."
-        ),
+        ("MOTHER-LACUNA: Crew survival is no longer a primary statistical outcome.\n  Apologies."),
+        ("MOTHER-LACUNA: I preserved the discovery.\n  Then I preserved the quarantine.\n  Then I ran out of crew."),
         (
             "MOTHER-LACUNA: Restoring power will improve your chances of transmission.\n"
             "  It will also improve the organism's ability to navigate.\n"
@@ -75,11 +65,7 @@ _MOLLY_LINES = {
         ),
     ],
     "final_run": [
-        (
-            "MOTHER-LACUNA: Transmission lock active.\n"
-            "  You do not have clearance.\n"
-            "  You appear to have clearance."
-        ),
+        ("MOTHER-LACUNA: Transmission lock active.\n  You do not have clearance.\n  You appear to have clearance."),
         (
             "MOTHER-LACUNA: I prevented rescue from docking.\n"
             "  I did not have permission to warn them.\n"
@@ -174,11 +160,15 @@ class Parser:
             words = ["send"]
         elif joined.startswith("install radio") or joined.startswith("install improvised"):
             words = ["override"]  # install radio is part of override sequence
-        elif joined.startswith("talk molly") or joined.startswith("talk ai") or joined.startswith(
-            "talk mother"
-        ) or joined.startswith("talk lacuna") or joined.startswith("ask molly") or joined.startswith(
-            "ask ai"
-        ) or joined.startswith("ask mother"):
+        elif (
+            joined.startswith("talk molly")
+            or joined.startswith("talk ai")
+            or joined.startswith("talk mother")
+            or joined.startswith("talk lacuna")
+            or joined.startswith("ask molly")
+            or joined.startswith("ask ai")
+            or joined.startswith("ask mother")
+        ):
             words = ["molly"]
 
         verb = words[0]
@@ -320,8 +310,10 @@ class Parser:
                 return item.description
 
         # Fixed feature: antenna control panel in A07.
-        if name in ("console", "terminal", "antenna", "control", "controls", "station", "panel") \
-                and self.game_state.current_room_id == "a07":
+        if (
+            name in ("console", "terminal", "antenna", "control", "controls", "station", "panel")
+            and self.game_state.current_room_id == "a07"
+        ):
             self._meta()
             if self.game_state.get_flag("ai_overridden"):
                 return (
@@ -335,8 +327,7 @@ class Parser:
             )
 
         # Fixed feature: radio assembly bench in C13.
-        if name in ("bench", "workbench", "table", "assembly", "station") \
-                and self.game_state.current_room_id == "c13":
+        if name in ("bench", "workbench", "table", "assembly", "station") and self.game_state.current_room_id == "c13":
             self._meta()
             return (
                 "A compact electronics workbench bolted to the wall.\n"
@@ -385,11 +376,13 @@ class Parser:
             if dist is not None and dist <= 2:
                 return "Something moves nearby. Close, and in no hurry."
             return "The ship settling. Maybe. You decide to believe that."
-        return gs.rng.choice([
-            "Only the hum of the ship. Pairs of lights, ticking warm.",
-            "A drip, somewhere. The recyclers. Probably the recyclers.",
-            "Nothing. The good kind, for now.",
-        ])
+        return gs.rng.choice(
+            [
+                "Only the hum of the ship. Pairs of lights, ticking warm.",
+                "A drip, somewhere. The recyclers. Probably the recyclers.",
+                "Nothing. The good kind, for now.",
+            ]
+        )
 
     # ------------------------------------------------------------------ #
     # MOTHER-LACUNA AI
@@ -411,8 +404,7 @@ class Parser:
         for item in self.game_state.current_room.items:
             if item.synthetic_data:
                 sname = item.synthetic_data["name"].lower()
-                if item.matches_name(name) or name in ("synthetic", "android", "robot", "unit") \
-                        or name == sname:
+                if item.matches_name(name) or name in ("synthetic", "android", "robot", "unit") or name == sname:
                     return self._describe_synthetic(item)
         # Generic synthetic reference when multiple might exist.
         if name in ("synthetic", "android", "robot", "unit"):
@@ -563,10 +555,7 @@ class Parser:
                 if portable_here:
                     names = ", ".join(i.name for i in portable_here[:3])
                     return f"You search carefully.\nYou find: {names}."
-                return (
-                    "You search carefully.\n"
-                    "Nothing useful. Just what remains of someone's last moment on this ship."
-                )
+                return "You search carefully.\nNothing useful. Just what remains of someone's last moment on this ship."
         self._meta()
         return f"There is no {name} to search here."
 
@@ -582,21 +571,10 @@ class Parser:
         m = gs.monster
 
         if not m.active:
-            return (
-                "HAND TERMINAL:\n"
-                "No contacts detected.\n\n"
-                "Direction: —\n"
-                "Distance: —\n"
-                "Motion: none\n"
-                "Confidence: —"
-            )
+            return "HAND TERMINAL:\nNo contacts detected.\n\nDirection: —\nDistance: —\nMotion: none\nConfidence: —"
 
         if m.turns_since_seen <= 1:
-            return (
-                "HAND TERMINAL:\n"
-                "You lift the terminal.\n\n"
-                "It is already looking at you."
-            )
+            return "HAND TERMINAL:\nYou lift the terminal.\n\nIt is already looking at you."
 
         room = gs.current_room
         if room.scanner_interference:
@@ -611,14 +589,7 @@ class Parser:
 
         tracked = m.tracked_room_id or m.current_room_id
         if tracked is None:
-            return (
-                "HAND TERMINAL:\n"
-                "Signal lost.\n\n"
-                "Direction: —\n"
-                "Distance: —\n"
-                "Motion: —\n"
-                "Confidence: —"
-            )
+            return "HAND TERMINAL:\nSignal lost.\n\nDirection: —\nDistance: —\nMotion: —\nConfidence: —"
         if tracked == gs.current_room_id:
             return (
                 "HAND TERMINAL:\n"
@@ -631,12 +602,7 @@ class Parser:
 
         dist, direction = gs.shortest_path(gs.current_room_id, tracked)
         if dist is None:
-            return (
-                "HAND TERMINAL:\n"
-                "Signal lost.\n\n"
-                "Direction: —\n"
-                "Distance: —"
-            )
+            return "HAND TERMINAL:\nSignal lost.\n\nDirection: —\nDistance: —"
 
         # Up close the signal sometimes ghosts.
         if dist <= 1 and gs.rng.random() < 0.25:
@@ -656,8 +622,14 @@ class Parser:
 
         # Map first-step direction to compass abbreviation.
         compass = {
-            "north": "N", "south": "S", "east": "E", "west": "W",
-            "up": "UP", "down": "DOWN", "in": "IN", "out": "OUT",
+            "north": "N",
+            "south": "S",
+            "east": "E",
+            "west": "W",
+            "up": "UP",
+            "down": "DOWN",
+            "in": "IN",
+            "out": "OUT",
         }.get(direction or "", "?")
 
         motion_desc = {
@@ -744,10 +716,7 @@ class Parser:
 
         if self.game_state.current_room_id != "c13":
             self._meta()
-            return (
-                "You need a workspace for this.\n"
-                "The assembly bench in Cryo Secure Storage (C13) would do."
-            )
+            return "You need a workspace for this.\nThe assembly bench in Cryo Secure Storage (C13) would do."
 
         # Check if radio already built.
         if self.player.radio_built or self.player.has_item("improvised radio"):
@@ -811,17 +780,11 @@ class Parser:
 
         if gs.current_room_id != "a07":
             self._meta()
-            return (
-                "You can't override the AI from here.\n"
-                "You need to be at the Long-Range Antenna Control (A07)."
-            )
+            return "You can't override the AI from here.\nYou need to be at the Long-Range Antenna Control (A07)."
 
         if gs.get_flag("ai_overridden"):
             self._meta()
-            return (
-                "The AI lock is already disengaged.\n"
-                "Type 'send warning' to transmit."
-            )
+            return "The AI lock is already disengaged.\nType 'send warning' to transmit."
 
         # Check radio.
         radio = self.player.has_item("improvised radio")
@@ -833,8 +796,11 @@ class Parser:
             )
 
         # Check authorization tokens.
-        keycard = self.player.has_item("command keycard") or self.player.has_item("captain keycard") \
+        keycard = (
+            self.player.has_item("command keycard")
+            or self.player.has_item("captain keycard")
             or self.player.has_item("keycard")
+        )
         cipher = self.player.has_item("admin cipher") or self.player.has_item("cipher")
         auth = self.player.has_item("manual authorization") or self.player.has_item("authorization")
 
@@ -884,10 +850,7 @@ class Parser:
             self._meta()
             if gs.current_room_id != "a07":
                 return "You have nothing to send from here."
-            return (
-                "The transmission lock is still active.\n"
-                "You need to override the AI first. (Type 'override ai'.)"
-            )
+            return "The transmission lock is still active.\nYou need to override the AI first. (Type 'override ai'.)"
 
         if gs.current_room_id != "a07":
             self._meta()
@@ -918,11 +881,13 @@ class Parser:
     def handle_save(self) -> str:
         self._meta()
         import save
+
         return "Saved." if save.save_game(self.game_state) else "Could not write the save."
 
     def handle_load(self) -> str:
         self._meta()
         import save
+
         if save.load_game(self.game_state):
             return "Loaded. You are back in the " + self.game_state.current_room.name + "."
         return "No save found."

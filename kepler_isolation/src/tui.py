@@ -68,8 +68,16 @@ def tracker_markup(m: dict) -> str:
     motion_desc = m.get("motion_desc", "slow")
     color = "red" if dist <= 2 else "yellow"
     arrow = ARROWS.get(d, "•")
-    compass = {"north": "N", "south": "S", "east": "E", "west": "W",
-               "up": "UP", "down": "DN", "in": "IN", "out": "OUT"}.get(d, d.upper())
+    compass = {
+        "north": "N",
+        "south": "S",
+        "east": "E",
+        "west": "W",
+        "up": "UP",
+        "down": "DN",
+        "in": "IN",
+        "out": "OUT",
+    }.get(d, d.upper())
     return (
         f"[{color}]◢ MOTION TRACKER ◣[/]\n"
         f"[{color}]{arrow}  {compass}[/]\n"

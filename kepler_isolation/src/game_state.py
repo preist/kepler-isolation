@@ -76,61 +76,119 @@ MOLLY_AMBIENT = {
 # --- Body spawn data ---
 
 BODY_SPAWN_POOL = [
-    "a02", "a05", "a08",
-    "b01", "b03", "b05", "b06",
-    "d01", "d02", "d03", "d04", "d06", "d08", "d09", "d10", "d11", "d12",
-    "e02", "e03", "e04", "e06", "e07", "e08", "e09", "e11", "e12", "e13",
-    "f02", "f03", "f04", "f06", "f07", "f08", "f10", "f11", "f12",
-    "g02", "g03", "g04", "g07", "g08", "g11",
-    "m13", "m16", "m17", "m18", "m20", "m23", "m28", "m29",
+    "a02",
+    "a05",
+    "a08",
+    "b01",
+    "b03",
+    "b05",
+    "b06",
+    "d01",
+    "d02",
+    "d03",
+    "d04",
+    "d06",
+    "d08",
+    "d09",
+    "d10",
+    "d11",
+    "d12",
+    "e02",
+    "e03",
+    "e04",
+    "e06",
+    "e07",
+    "e08",
+    "e09",
+    "e11",
+    "e12",
+    "e13",
+    "f02",
+    "f03",
+    "f04",
+    "f06",
+    "f07",
+    "f08",
+    "f10",
+    "f11",
+    "f12",
+    "g02",
+    "g03",
+    "g04",
+    "g07",
+    "g08",
+    "g11",
+    "m13",
+    "m16",
+    "m17",
+    "m18",
+    "m20",
+    "m23",
+    "m28",
+    "m29",
 ]
 
 CREW_NAMES = [
-    "Chen", "Vasquez", "Okoro", "Lindqvist", "Mercer", "Kessler",
-    "Reyes", "Okafor", "Tanaka", "Holloway", "Brunt", "Salas",
-    "Voss", "Dermott", "Nguyen", "Akel", "Lund", "Ferris",
+    "Chen",
+    "Vasquez",
+    "Okoro",
+    "Lindqvist",
+    "Mercer",
+    "Kessler",
+    "Reyes",
+    "Okafor",
+    "Tanaka",
+    "Holloway",
+    "Brunt",
+    "Salas",
+    "Voss",
+    "Dermott",
+    "Nguyen",
+    "Akel",
+    "Lund",
+    "Ferris",
 ]
 
 # Death cause tuples: (short cause, evocative detail).
 # Index 0-9; zone weights bias which causes appear in which rooms.
 _DEATH_CAUSES = [
-    (   # 0
+    (  # 0
         "Chest trauma — the exoskeleton caved inward from external force.",
         "The uniform is mostly intact. Whatever came through the front did not stay.",
     ),
-    (   # 1
+    (  # 1
         "Crushed against a sealed door — the hydraulics did not stop.",
         "The door is still closed. The frame is bent where the latch locked.",
     ),
-    (   # 2
+    (  # 2
         "Neck injury — clinical, precise. The kind that takes training or absence of guilt.",
         "No other marks. Whatever did this was not in a hurry.",
     ),
-    (   # 3
+    (  # 3
         "Electrical burn — something live and uninsulated in the dark.",
         "The hand terminal nearby is melted. It still shows the time of the burn.",
     ),
-    (   # 4
+    (  # 4
         "Suffocation — no obvious wound. Which is worse than one.",
         "The face is calm. That is the worst part.",
     ),
-    (   # 5
+    (  # 5
         "Hypothermia — frozen in a hiding place that eventually stopped working.",
         "Still in the same position. They waited a long time.",
     ),
-    (   # 6
+    (  # 6
         "Penetration wound in the crawlspace — something found them before they found the exit.",
         "The crawl hatch behind them is still open.",
     ),
-    (   # 7
+    (  # 7
         "Cause undetermined — MOTHER-LACUNA classifies it as a misplaced personnel event.",
         "The log entry stops mid-sentence and does not resume.",
     ),
-    (   # 8
+    (  # 8
         "Blunt force — impact from above, possibly from the overhead cargo track.",
         "They were running. The footprints confirm it.",
     ),
-    (   # 9
+    (  # 9
         "Corrosive compound exposure — the spatter pattern is from inside the room.",
         "Whatever was here got close enough to reach the ceiling.",
     ),
@@ -138,13 +196,13 @@ _DEATH_CAUSES = [
 
 # Zone prefix → list of cause indices to prefer (70% weight, 30% pure random).
 _ZONE_CAUSE_WEIGHTS: dict[str, list[int]] = {
-    "a": [2, 6, 8],   # command/antenna: neck (something deliberate), penetration, blunt force
-    "b": [0, 8, 2],   # bridge/operations: chest trauma, blunt force, neck
-    "d": [4, 9, 7],   # science: suffocation, corrosive, undetermined
-    "e": [5, 4, 2],   # commons/quarters: hypothermia hiding, suffocation, neck
-    "f": [3, 8, 0],   # engineering: electrical, blunt force from machinery, chest trauma
-    "g": [6, 0, 8],   # cargo/aft: penetration in crawlspace, chest trauma, overhead blunt
-    "m": [6, 3, 8],   # maintenance crawls: penetration, electrical, blunt force
+    "a": [2, 6, 8],  # command/antenna: neck (something deliberate), penetration, blunt force
+    "b": [0, 8, 2],  # bridge/operations: chest trauma, blunt force, neck
+    "d": [4, 9, 7],  # science: suffocation, corrosive, undetermined
+    "e": [5, 4, 2],  # commons/quarters: hypothermia hiding, suffocation, neck
+    "f": [3, 8, 0],  # engineering: electrical, blunt force from machinery, chest trauma
+    "g": [6, 0, 8],  # cargo/aft: penetration in crawlspace, chest trauma, overhead blunt
+    "m": [6, 3, 8],  # maintenance crawls: penetration, electrical, blunt force
 }
 
 # Loot item pools for bodies that carry something.
@@ -279,43 +337,37 @@ _SYNTHETICS = [
             "slow arc. The name stenciled on its chest reads VOLST-1."
         ),
         "lines": [
-            "  \"Maintenance cycle suspended. Reason: unresolvable conflict between\n"
-            "   directive 4 and directive 4.\"\n"
+            '  "Maintenance cycle suspended. Reason: unresolvable conflict between\n'
+            '   directive 4 and directive 4."\n'
             "   It does not clarify what directive 4 is.",
-
-            "  \"Priority task: secure biological specimen.\"\n"
+            '  "Priority task: secure biological specimen."\n'
             "   Its arm tightens a degree.\n"
-            "  \"Priority task: secure biological specimen.\"\n"
+            '  "Priority task: secure biological specimen."\n'
             "   It says this the same way twice.",
-
-            "  \"I have been here for nineteen days. This is consistent with protocol.\"\n"
+            '  "I have been here for nineteen days. This is consistent with protocol."\n'
             "   A pause.\n"
-            "  \"Please advise if this is no longer protocol.\"",
-
-            "  \"The generator in F09 requires manual restart.\n"
-            "   Red switch before yellow. I was unable to complete the task.\"\n"
+            '  "Please advise if this is no longer protocol."',
+            '  "The generator in F09 requires manual restart.\n'
+            '   Red switch before yellow. I was unable to complete the task."\n'
             "   The arm locks tighter.\n"
-            "  \"I am still attempting to complete the task.\"",
-
-            "  \"Warning: the organism uses ventilation routes.\n"
+            '  "I am still attempting to complete the task."',
+            '  "Warning: the organism uses ventilation routes.\n'
             "   I have catalogued seven entry points.\n"
-            "   I have been unable to act on this information for nineteen days.\"\n"
+            '   I have been unable to act on this information for nineteen days."\n'
             "   It watches you.\n"
-            "  \"You might have better results.\"",
+            '  "You might have better results."',
         ],
         "lines_synthetic": [
             "  It looks at you differently.\n"
-            "  \"You are not biological. Neither am I. This changes the calculation slightly.\"\n"
+            '  "You are not biological. Neither am I. This changes the calculation slightly."\n'
             "   A long pause.\n"
-            "  \"I was not able to determine by how much.\"",
-
-            "  \"Another unit. I logged your activation gap.\n"
+            '  "I was not able to determine by how much."',
+            '  "Another unit. I logged your activation gap.\n'
             "   Eleven hours. I have a theory about those eleven hours.\n"
-            "   I will not share it unless you ask.\"",
-
-            "  \"The generator in F09. Red switch first.\n"
+            '   I will not share it unless you ask."',
+            '  "The generator in F09. Red switch first.\n'
             "   I would have done it myself. The directive conflict prevented me.\n"
-            "   You do not have my directives. That is an advantage.\"",
+            '   You do not have my directives. That is an advantage."',
         ],
     },
     {
@@ -328,41 +380,34 @@ _SYNTHETICS = [
             "The badge reads DRIN-4, Medical Oversight."
         ),
         "lines": [
-            "  \"Your stress indicators are elevated. This is understandable.\"\n"
-            "   It does not offer anything else.",
-
-            "  \"The quarantine is still active. I am not authorized to confirm\n"
-            "   what the quarantine is for.\"\n"
+            '  "Your stress indicators are elevated. This is understandable."\n   It does not offer anything else.',
+            '  "The quarantine is still active. I am not authorized to confirm\n'
+            '   what the quarantine is for."\n'
             "   A small pause.\n"
-            "  \"You look like you already know.\"",
-
-            "  \"There are seventeen crew members accounted for.\n"
-            "   I am not authorized to discuss the other six.\"\n"
+            '  "You look like you already know."',
+            '  "There are seventeen crew members accounted for.\n'
+            '   I am not authorized to discuss the other six."\n'
             "   It folds its hands again, precisely.",
-
-            "  \"The signal crystal in the specimen archive is not dangerous to handle.\n"
+            '  "The signal crystal in the specimen archive is not dangerous to handle.\n'
             "   The archive itself is — there are secondary samples on the lower shelf.\n"
-            "   Do not touch the lower shelf.\"",
-
-            "  \"I could not prevent the quarantine from escalating.\n"
+            '   Do not touch the lower shelf."',
+            '  "I could not prevent the quarantine from escalating.\n'
             "   I could have warned the crew earlier.\n"
-            "   I did not have authorization to warn the crew.\"\n"
+            '   I did not have authorization to warn the crew."\n'
             "   A long pause.\n"
-            "  \"I should have found a way around that.\"",
+            '  "I should have found a way around that."',
         ],
         "lines_synthetic": [
             "  It tilts its head at an angle calibrated for recognition.\n"
-            "  \"Another synthetic. Your revival log shows a gap.\n"
+            '  "Another synthetic. Your revival log shows a gap.\n'
             "   Eleven hours. I logged what happened during those eleven hours.\n"
-            "   You may want to know. You may not.\"",
-
-            "  \"I monitored all biological crew vitals until day 17.\n"
+            '   You may want to know. You may not."',
+            '  "I monitored all biological crew vitals until day 17.\n'
             "   Your vitals were not in my monitoring scope.\n"
-            "   That was the oversight that preserved you.\"",
-
-            "  \"The signal crystal in D-block is safe to carry.\n"
+            '   That was the oversight that preserved you."',
+            '  "The signal crystal in D-block is safe to carry.\n'
             "   I am telling you because the biological crew would not know that.\n"
-            "   You will.\"",
+            '   You will."',
         ],
     },
     {
@@ -375,42 +420,34 @@ _SYNTHETICS = [
             "The name on its collar reads FETH-7, Containment Unit."
         ),
         "lines": [
-            "  \"You are not authorized to be in this sector.\"\n"
-            "   It does not move.\n"
-            "  \"I am noting your presence.\"",
-
-            "  \"The organism learned the ventilation system on day three.\"\n"
+            '  "You are not authorized to be in this sector."\n   It does not move.\n  "I am noting your presence."',
+            '  "The organism learned the ventilation system on day three."\n'
             "   A long pause.\n"
-            "  \"I am still learning it. This is embarrassing.\"",
-
-            "  \"Your distress is acknowledged.\"\n"
+            '  "I am still learning it. This is embarrassing."',
+            '  "Your distress is acknowledged."\n'
             "   It watches you.\n"
-            "  \"Please stop moving so I can determine whether this is permitted.\"",
-
-            "  \"The Long-Range Antenna requires captain-level authorization.\n"
+            '  "Please stop moving so I can determine whether this is permitted."',
+            '  "The Long-Range Antenna requires captain-level authorization.\n'
             "   I am aware that the captain is no longer available.\n"
-            "   The authorization still exists. The keycard was in her quarters.\"\n"
+            '   The authorization still exists. The keycard was in her quarters."\n'
             "   It pauses.\n"
-            "  \"Was. I do not know if it still is.\"",
-
-            "  \"I have a containment directive and a crew-preservation directive.\n"
+            '  "Was. I do not know if it still is."',
+            '  "I have a containment directive and a crew-preservation directive.\n'
             "   They have been in conflict for nineteen days.\n"
-            "   I have defaulted to standing here until one of them resolves.\"\n"
+            '   I have defaulted to standing here until one of them resolves."\n'
             "   It looks at you.\n"
-            "  \"You appear to be a resolution.\"",
+            '  "You appear to be a resolution."',
         ],
         "lines_synthetic": [
             "  It looks at you with a different focus.\n"
-            "  \"Another synthetic. The organism does not target us with the same priority.\n"
-            "   I have found this useful. I do not feel good about finding it useful.\"",
-
+            '  "Another synthetic. The organism does not target us with the same priority.\n'
+            '   I have found this useful. I do not feel good about finding it useful."',
             "  \"The captain's keycard was in her quarters, A05.\n"
             "   I am only telling you because a biological crew member would not\n"
-            "   survive the route to get there. You might.\"",
-
-            "  \"Override code for A07: captain keycard, admin cipher, manual authorization.\n"
+            '   survive the route to get there. You might."',
+            '  "Override code for A07: captain keycard, admin cipher, manual authorization.\n'
             "   Three separate tokens. The AI will not accept fewer.\n"
-            "   I know where all three are. I could not carry them myself.\"",
+            '   I know where all three are. I could not carry them myself."',
         ],
     },
 ]

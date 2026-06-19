@@ -47,7 +47,6 @@ def test_crawl_in_and_down_directions(game):
     gs, parser = game
     # C09 -> south leads to C08; crawl should also work.
     gs.current_room_id = "c09"
-    src = gs.current_room_id
     exits = gs.current_room.exits
     first_dir = next(iter(exits))
     parser.parse_command(f"crawl {first_dir}")
@@ -309,12 +308,12 @@ def test_full_win_path(game):
 
     # Override at A07.
     gs.current_room_id = "a07"
-    out = parser.parse_command("override ai")
+    parser.parse_command("override ai")
     assert gs.get_flag("ai_overridden") is True
     assert gs.game_phase == "final_run"
 
     # Send warning.
-    out = parser.parse_command("send warning")
+    parser.parse_command("send warning")
     assert gs.win_state is True
 
 
