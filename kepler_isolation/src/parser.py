@@ -251,7 +251,24 @@ class Parser:
         self.game_state.visited_rooms.add(dest_id)
 
         self._act(sound)
-        return f"{verb_phrase} {direction}."
+        result = f"{verb_phrase} {direction}."
+
+        # First-encounter synthetic introduction: the moment you see it and
+        # think, just for a second, that someone survived.
+        dest_room = self.game_state.rooms[dest_id]
+        for item in dest_room.items:
+            if item.synthetic_data and not item.synthetic_data.get("introduced"):
+                item.synthetic_data["introduced"] = True
+                sname = item.synthetic_data["name"]
+                result += (
+                    "\n\nA human-shaped figure stands near the far wall.\n"
+                    "For one second, you think someone survived this.\n\n"
+                    "Then it turns. The movement is wrong — too smooth, too deliberate.\n"
+                    f"The badge reads {sname}."
+                )
+                break
+
+        return result
 
     def handle_movement(self, direction: str) -> str:
         return self._move_to(direction, 1, "You walk")
@@ -333,7 +350,12 @@ class Parser:
 
     def _describe_synthetic(self, item) -> str:
         data = item.synthetic_data
-        lines = item.synthetic_data.get("lines", [])
+        # Synthetic player (Valdorf) gets a different, more direct response
+        # when talking to other synthetics — less corporate, more peer.
+        if self.player.type == "synthetic" and data.get("lines_synthetic"):
+            lines = data["lines_synthetic"]
+        else:
+            lines = data.get("lines", [])
         idx = (self.game_state.turn_count // 4) % max(len(lines), 1)
         dialogue = lines[idx] if lines else ""
         out = item.description

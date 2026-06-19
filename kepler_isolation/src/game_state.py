@@ -91,46 +91,172 @@ CREW_NAMES = [
     "Voss", "Dermott", "Nguyen", "Akel", "Lund", "Ferris",
 ]
 
+# Death cause tuples: (short cause, evocative detail).
+# Index 0-9; zone weights bias which causes appear in which rooms.
 _DEATH_CAUSES = [
-    (
+    (   # 0
         "Chest trauma — the exoskeleton caved inward from external force.",
         "The uniform is mostly intact. Whatever came through the front did not stay.",
     ),
-    (
+    (   # 1
         "Crushed against a sealed door — the hydraulics did not stop.",
         "The door is still closed. The frame is bent where the latch locked.",
     ),
-    (
+    (   # 2
         "Neck injury — clinical, precise. The kind that takes training or absence of guilt.",
         "No other marks. Whatever did this was not in a hurry.",
     ),
-    (
+    (   # 3
         "Electrical burn — something live and uninsulated in the dark.",
         "The hand terminal nearby is melted. It still shows the time of the burn.",
     ),
-    (
+    (   # 4
         "Suffocation — no obvious wound. Which is worse than one.",
         "The face is calm. That is the worst part.",
     ),
-    (
+    (   # 5
         "Hypothermia — frozen in a hiding place that eventually stopped working.",
         "Still in the same position. They waited a long time.",
     ),
-    (
+    (   # 6
         "Penetration wound in the crawlspace — something found them before they found the exit.",
         "The crawl hatch behind them is still open.",
     ),
-    (
+    (   # 7
         "Cause undetermined — MOTHER-LACUNA classifies it as a misplaced personnel event.",
         "The log entry stops mid-sentence and does not resume.",
     ),
-    (
+    (   # 8
         "Blunt force — impact from above, possibly from the overhead cargo track.",
         "They were running. The footprints confirm it.",
     ),
-    (
+    (   # 9
         "Corrosive compound exposure — the spatter pattern is from inside the room.",
         "Whatever was here got close enough to reach the ceiling.",
+    ),
+]
+
+# Zone prefix → list of cause indices to prefer (70% weight, 30% pure random).
+_ZONE_CAUSE_WEIGHTS: dict[str, list[int]] = {
+    "a": [2, 6, 8],   # command/antenna: neck (something deliberate), penetration, blunt force
+    "b": [0, 8, 2],   # bridge/operations: chest trauma, blunt force, neck
+    "d": [4, 9, 7],   # science: suffocation, corrosive, undetermined
+    "e": [5, 4, 2],   # commons/quarters: hypothermia hiding, suffocation, neck
+    "f": [3, 8, 0],   # engineering: electrical, blunt force from machinery, chest trauma
+    "g": [6, 0, 8],   # cargo/aft: penetration in crawlspace, chest trauma, overhead blunt
+    "m": [6, 3, 8],   # maintenance crawls: penetration, electrical, blunt force
+}
+
+# Loot item pools for bodies that carry something.
+_AUDIO_LOG_TEXTS = [
+    (
+        "PERSONAL RECORDING — Day 14:\n"
+        "The thing we brought up doesn't sleep.\n"
+        "I checked the spec sheet. It doesn't have sleep.\n"
+        "Maybe that's why it sounds so interested in ours."
+    ),
+    (
+        "MEMO TO DR. REYES — Encrypted:\n"
+        "Destroy the growth samples before you leave.\n"
+        "Not the main specimen. The growth samples.\n"
+        "If you're reading this I didn't make it out.\n"
+        "Destroy them anyway."
+    ),
+    (
+        "VOICE MEMO — Day 12:\n"
+        "The AI keeps rerouting my calls to the captain.\n"
+        "The captain stopped answering on day 9.\n"
+        "I've started answering for her."
+    ),
+    (
+        "CREW MESSAGE — Unsent:\n"
+        "I'm sorry I didn't tell you what the contract was.\n"
+        "The money was supposed to make it worth it.\n"
+        "It wasn't worth it."
+    ),
+    (
+        "ENGINEERING NOTE — Kessler:\n"
+        "Generator is down. I can bring it back up but\n"
+        "I need someone to watch the east vent while I work.\n"
+        "Don't let it open.\n"
+        "I'll explain when I get back.\n"
+        "— I didn't get back."
+    ),
+    (
+        "SCIENCE LOG — Fragment:\n"
+        "Specimen shows recognition behavior.\n"
+        "Not pattern recognition. Person recognition.\n"
+        "It knows Vasquez's voice.\n"
+        "Vasquez has been informed."
+    ),
+    (
+        "SECURITY REPORT — Day 11:\n"
+        "Five crew unaccounted for.\n"
+        "MOTHER-LACUNA classifies them as 'relocated'.\n"
+        "Relocated where?\n"
+        "Response: 'internal sector management.'\n"
+        "I've started sleeping with the lights on."
+    ),
+    (
+        "CAPTAIN'S NOTE:\n"
+        "If Science asks again, the answer is no.\n"
+        "No thaw. No transfer. No profit clause.\n"
+        "If I am overruled, tell my wife I tried."
+    ),
+    (
+        "VOICE MEMO — Day 8:\n"
+        "The scanner shows it near Medical.\n"
+        "The scanner showed it near Medical yesterday.\n"
+        "Either it likes it there or the scanner is wrong.\n"
+        "I know which one I'd prefer."
+    ),
+    (
+        "PERSONAL LOG — Day 15:\n"
+        "I know where the beacon was transmitting.\n"
+        "I know what it was saying.\n"
+        "I almost sent the warning.\n"
+        "Almost."
+    ),
+]
+
+_PERSONAL_NOTE_TEXTS = [
+    "Folded in a uniform pocket. Written in marker:\n'Don't use the south vent near G block. It hears you breathing.'",
+    "Torn from an equipment tag:\n'F09 generator: red switch first, then the yellow.\nNot the other way. Learn from my mistake.'",
+    "Written on the back of a cafeteria receipt:\n'The AI knows what happened.\nAsk it directly. It can't lie outright.\nIt just arrives at truth very slowly.'",
+    "Sticky note, folded small:\n'DRIN-4 is still running in Medical.\nIt won't help you. It won't hurt you.\nIt is waiting for authorization that isn't coming.'",
+    "Scrawled on a med bay intake form:\n'The crystal in the specimen cabinet is not a specimen.\nThey built it. Day 3. Don't leave it there.'",
+    "Crew manifest, annotated in pen:\n'Six names circled. Saw them last in G block.\n'Six names crossed out.\n'Don't go to G block alone.'",
+    "Inside a folded equipment schedule:\n'If you find an improvised radio, the antenna patch socket\nis in A07. Command keycard gets you past the AI lock.\nI left the key. I just couldn't get there.'",
+    "On a napkin from the galley:\n'The cold parts of the ship are safer.\n'It doesn't like the freezer. Neither do I.\n'The freezer is safer.'",
+]
+
+_DATA_CHIP_TEXTS = [
+    (
+        "SHIP MANIFEST — USCSS Nightglass\n"
+        "Cargo: Survey equipment, specimen storage, Class-4 biosafety units.\n"
+        "Personnel: 23 crew, 1 contractor, 3 synthetic units.\n"
+        "Mission: Deep survey, Kepler-186f-Lacuna.\n"
+        "Status: OVERDUE. No further response from vessel."
+    ),
+    (
+        "ENGINEERING SCHEMATIC — Emergency Generator F09:\n"
+        "Primary switch: red breaker, east wall.\n"
+        "Must be activated before secondary bus or you lose sequencing.\n"
+        "Estimated boot time: 40 seconds.\n"
+        "Note: The 40 seconds are very loud."
+    ),
+    (
+        "SECURITY ACCESS LOG — Day 6:\n"
+        "A07 (Long-Range Antenna): restricted access, captain override required.\n"
+        "Full unlock: command keycard + admin cipher + manual authorization.\n"
+        "Captain's note appended: 'In case I can't be there myself.'"
+    ),
+    (
+        "SPECIMEN CONTAINMENT REPORT:\n"
+        "Signal crystal (D-block lab, shelf 3): organic-synthetic hybrid.\n"
+        "Do not expose to sustained electrical current.\n"
+        "The current will not damage the crystal.\n"
+        "It will damage you."
     ),
 ]
 
@@ -149,20 +275,47 @@ _SYNTHETICS = [
         "profile": "broken",
         "description": (
             "A maintenance synthetic stands in the corner, one arm locked at an angle "
-            "that does not correspond to any task. Its optical array tracks the room. "
-            "The name stenciled on its chest reads VOLST-1."
+            "that does not correspond to any task. Its optical array tracks the room in a "
+            "slow arc. The name stenciled on its chest reads VOLST-1."
         ),
         "lines": [
             "  \"Maintenance cycle suspended. Reason: unresolvable conflict between\n"
             "   directive 4 and directive 4.\"\n"
             "   It does not clarify what directive 4 is.",
+
             "  \"Priority task: secure biological specimen.\"\n"
-            "   Its arm locks tighter.\n"
+            "   Its arm tightens a degree.\n"
             "  \"Priority task: secure biological specimen.\"\n"
             "   It says this the same way twice.",
+
             "  \"I have been here for nineteen days. This is consistent with protocol.\"\n"
             "   A pause.\n"
             "  \"Please advise if this is no longer protocol.\"",
+
+            "  \"The generator in F09 requires manual restart.\n"
+            "   Red switch before yellow. I was unable to complete the task.\"\n"
+            "   The arm locks tighter.\n"
+            "  \"I am still attempting to complete the task.\"",
+
+            "  \"Warning: the organism uses ventilation routes.\n"
+            "   I have catalogued seven entry points.\n"
+            "   I have been unable to act on this information for nineteen days.\"\n"
+            "   It watches you.\n"
+            "  \"You might have better results.\"",
+        ],
+        "lines_synthetic": [
+            "  It looks at you differently.\n"
+            "  \"You are not biological. Neither am I. This changes the calculation slightly.\"\n"
+            "   A long pause.\n"
+            "  \"I was not able to determine by how much.\"",
+
+            "  \"Another unit. I logged your activation gap.\n"
+            "   Eleven hours. I have a theory about those eleven hours.\n"
+            "   I will not share it unless you ask.\"",
+
+            "  \"The generator in F09. Red switch first.\n"
+            "   I would have done it myself. The directive conflict prevented me.\n"
+            "   You do not have my directives. That is an advantage.\"",
         ],
     },
     {
@@ -170,20 +323,46 @@ _SYNTHETICS = [
         "name": "DRIN-4",
         "profile": "caretaker",
         "description": (
-            "A medical synthetic sits upright beside a supply shelf, hands folded. "
-            "Its uniform is spotless in a way that feels wrong given everything else. "
+            "A medical synthetic sits upright beside a supply shelf, hands folded in its lap. "
+            "Its uniform is spotless in a way that feels deeply wrong given everything else. "
             "The badge reads DRIN-4, Medical Oversight."
         ),
         "lines": [
             "  \"Your stress indicators are elevated. This is understandable.\"\n"
             "   It does not offer anything else.",
-            "  \"The quarantine is still active. I am not authorized to confirm what\n"
-            "   the quarantine is for.\"\n"
+
+            "  \"The quarantine is still active. I am not authorized to confirm\n"
+            "   what the quarantine is for.\"\n"
             "   A small pause.\n"
             "  \"You look like you already know.\"",
-            "  \"There are seventeen crew accounted for. I am not authorized\n"
-            "   to discuss the other six.\"\n"
-            "   It folds its hands again.",
+
+            "  \"There are seventeen crew members accounted for.\n"
+            "   I am not authorized to discuss the other six.\"\n"
+            "   It folds its hands again, precisely.",
+
+            "  \"The signal crystal in the specimen archive is not dangerous to handle.\n"
+            "   The archive itself is — there are secondary samples on the lower shelf.\n"
+            "   Do not touch the lower shelf.\"",
+
+            "  \"I could not prevent the quarantine from escalating.\n"
+            "   I could have warned the crew earlier.\n"
+            "   I did not have authorization to warn the crew.\"\n"
+            "   A long pause.\n"
+            "  \"I should have found a way around that.\"",
+        ],
+        "lines_synthetic": [
+            "  It tilts its head at an angle calibrated for recognition.\n"
+            "  \"Another synthetic. Your revival log shows a gap.\n"
+            "   Eleven hours. I logged what happened during those eleven hours.\n"
+            "   You may want to know. You may not.\"",
+
+            "  \"I monitored all biological crew vitals until day 17.\n"
+            "   Your vitals were not in my monitoring scope.\n"
+            "   That was the oversight that preserved you.\"",
+
+            "  \"The signal crystal in D-block is safe to carry.\n"
+            "   I am telling you because the biological crew would not know that.\n"
+            "   You will.\"",
         ],
     },
     {
@@ -192,19 +371,46 @@ _SYNTHETICS = [
         "profile": "containment",
         "description": (
             "A security synthetic stands at the threshold of the room, facing outward. "
-            "Its head turns toward you at an angle that is slightly too fast. "
+            "Its head turns toward you at an angle that is slightly too fast to feel natural. "
             "The name on its collar reads FETH-7, Containment Unit."
         ),
         "lines": [
             "  \"You are not authorized to be in this sector.\"\n"
             "   It does not move.\n"
             "  \"I am noting your presence.\"",
+
             "  \"The organism learned the ventilation system on day three.\"\n"
             "   A long pause.\n"
             "  \"I am still learning it. This is embarrassing.\"",
+
             "  \"Your distress is acknowledged.\"\n"
             "   It watches you.\n"
             "  \"Please stop moving so I can determine whether this is permitted.\"",
+
+            "  \"The Long-Range Antenna requires captain-level authorization.\n"
+            "   I am aware that the captain is no longer available.\n"
+            "   The authorization still exists. The keycard was in her quarters.\"\n"
+            "   It pauses.\n"
+            "  \"Was. I do not know if it still is.\"",
+
+            "  \"I have a containment directive and a crew-preservation directive.\n"
+            "   They have been in conflict for nineteen days.\n"
+            "   I have defaulted to standing here until one of them resolves.\"\n"
+            "   It looks at you.\n"
+            "  \"You appear to be a resolution.\"",
+        ],
+        "lines_synthetic": [
+            "  It looks at you with a different focus.\n"
+            "  \"Another synthetic. The organism does not target us with the same priority.\n"
+            "   I have found this useful. I do not feel good about finding it useful.\"",
+
+            "  \"The captain's keycard was in her quarters, A05.\n"
+            "   I am only telling you because a biological crew member would not\n"
+            "   survive the route to get there. You might.\"",
+
+            "  \"Override code for A07: captain keycard, admin cipher, manual authorization.\n"
+            "   Three separate tokens. The AI will not accept fewer.\n"
+            "   I know where all three are. I could not carry them myself.\"",
         ],
     },
 ]
@@ -306,24 +512,65 @@ class GameState:
     # ------------------------------------------------------------------ #
     # Spawn system
     # ------------------------------------------------------------------ #
+    def _pick_death_cause(self, room_id: str) -> tuple[str, str]:
+        """Pick a cause of death weighted toward the room's zone."""
+        zone = room_id[0] if room_id and room_id[0].isalpha() else "m"
+        preferred = _ZONE_CAUSE_WEIGHTS.get(zone, [])
+        if preferred and self.rng.random() < 0.7:
+            idx = self.rng.choice(preferred)
+        else:
+            idx = self.rng.randrange(len(_DEATH_CAUSES))
+        return _DEATH_CAUSES[idx]
+
+    def _make_loot_item(self) -> "Item | None":
+        """Create a small item to place near a body (or None for no loot)."""
+        roll = self.rng.random()
+        if roll < 0.30:
+            return Item(
+                name="audio log",
+                aliases="log,audio,recording,chip",
+                description="A crew audio recording chip. Scratched but readable.",
+                portable=True,
+                readable_text=self.rng.choice(_AUDIO_LOG_TEXTS),
+            )
+        elif roll < 0.50:
+            return Item(
+                name="personal note",
+                aliases="note,paper,memo,message",
+                description="A handwritten note. Folded. Addressed to no one in particular.",
+                portable=True,
+                readable_text=self.rng.choice(_PERSONAL_NOTE_TEXTS),
+            )
+        elif roll < 0.65:
+            return Item(
+                name="data chip",
+                aliases="chip,data,disk,drive",
+                description="A small data chip. Company-issue grey plastic.",
+                portable=True,
+                readable_text=self.rng.choice(_DATA_CHIP_TEXTS),
+            )
+        elif roll < 0.75:
+            return Item(
+                name="painkillers",
+                aliases="pills,meds,medicine,painkillers",
+                description="A sealed blister pack. Three doses. Crew pharmacological standard.",
+                portable=True,
+                use_effect="You take a dose. The edge comes off. It doesn't last.",
+            )
+        return None  # 25% of bodies have nothing useful on them
+
     def spawn_random_entities(self):
         """Place 20 bodies and 3 synthetics randomly across the ship."""
         pool = [r for r in BODY_SPAWN_POOL if r in self.rooms]
         chosen = self.rng.sample(pool, min(20, len(pool)))
         names = self.rng.sample(CREW_NAMES, min(len(chosen), len(CREW_NAMES)))
-        # Pad names if needed (more bodies than names).
         while len(names) < len(chosen):
             names.append(f"Crew Member {len(names) + 1}")
 
         for i, room_id in enumerate(chosen):
             name = names[i]
-            cause_idx = self.rng.randrange(len(_DEATH_CAUSES))
-            cause, detail = _DEATH_CAUSES[cause_idx]
-            desc = (
-                f"{name}.\n"
-                f"{cause}\n"
-                f"{detail}"
-            )
+            cause, detail = self._pick_death_cause(room_id)
+            desc = f"{name}.\n{cause}\n{detail}"
             body = Item(
                 name="body",
                 aliases="body,corpse,dead,person,crew,remains",
@@ -331,8 +578,13 @@ class GameState:
                 portable=False,
             )
             self.rooms[room_id].items.append(body)
+            # ~75% of bodies carry something.
+            loot = self._make_loot_item()
+            if loot:
+                self.rooms[room_id].items.append(loot)
 
-        # Place one synthetic per pool.
+        # Place one synthetic per pool, using the full data including
+        # synthetic-player-specific dialogue.
         for synth_data in _SYNTHETICS:
             pool_key = synth_data["pool"]
             candidates = [r for r in SYNTHETIC_POOLS[pool_key] if r in self.rooms]
@@ -349,6 +601,8 @@ class GameState:
                 "profile": synth_data["profile"],
                 "name": synth_data["name"],
                 "lines": synth_data["lines"],
+                "lines_synthetic": synth_data.get("lines_synthetic", []),
+                "introduced": False,  # first-encounter flag
             }
             self.rooms[room_id].items.append(synth_item)
 

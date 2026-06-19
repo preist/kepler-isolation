@@ -34,13 +34,25 @@ _ITEM_FIELDS = (
 
 
 def _item_to_dict(item):
-    return {f: getattr(item, f) for f in _ITEM_FIELDS}
+    d = {f: getattr(item, f) for f in _ITEM_FIELDS}
+    # Synthetic NPCs carry extra state (introduced flag, dialogue).
+    if item.synthetic_data is not None:
+        d["synthetic_data"] = {
+            "profile": item.synthetic_data["profile"],
+            "name": item.synthetic_data["name"],
+            "lines": item.synthetic_data["lines"],
+            "lines_synthetic": item.synthetic_data.get("lines_synthetic", []),
+            "introduced": item.synthetic_data.get("introduced", False),
+        }
+    else:
+        d["synthetic_data"] = None
+    return d
 
 
 def _item_from_dict(d):
     from item import Item
 
-    return Item(
+    item = Item(
         d["name"],
         d["aliases"],
         d["description"],
@@ -53,6 +65,9 @@ def _item_from_dict(d):
         sound_on_use=d["sound_on_use"],
         required_for_win=d["required_for_win"],
     )
+    if d.get("synthetic_data"):
+        item.synthetic_data = d["synthetic_data"]
+    return item
 
 
 def to_dict(gs) -> dict:
