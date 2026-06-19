@@ -32,6 +32,7 @@ from PySide6.QtGui import (
     QColor,
     QFont,
     QFontDatabase,
+    QIcon,
     QKeyEvent,
     QPalette,
     QPixmap,
@@ -783,6 +784,11 @@ def run() -> None:
     mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
     mono.setPointSize(11)
     app.setFont(mono)
+
+    icon_path = Path(__file__).parent.parent / "AppIcon.icns"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+
     win = KeplerGUI()
     win.show()
     sys.exit(app.exec())
