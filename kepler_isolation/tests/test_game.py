@@ -103,7 +103,7 @@ def test_scan_reports_direction_and_distance(game):
     out = parser.parse_command("scan")
     assert "Direction:" in out
     assert "Distance:" in out
-    assert "meters" in out
+    assert " m" in out  # unified meters display: "~75 m"
     assert "Confidence:" in out
 
 

@@ -551,6 +551,43 @@ class GameState:
                     queue.append((dest, first_dir, dist + 1))
         return None, None
 
+    def compass_direction(self, start: str, goal: str) -> str | None:
+        """Return a compass string (N/S/NE/SW etc.) toward goal from start.
+
+        Takes the first two hops of the shortest path and collapses them into a
+        cardinal or intercardinal direction for the scanner display."""
+        dist, first = self.shortest_path(start, goal)
+        if dist is None or first is None:
+            return None
+
+        _CARDINAL = {"north", "south", "east", "west"}
+        _OPPOSITE = {"north": "south", "south": "north", "east": "west", "west": "east"}
+
+        # For non-cardinal first hops (up/down/in/out) just return as-is.
+        if first not in _CARDINAL:
+            return first
+
+        # Look one step further to find a perpendicular second hop.
+        mid_room = self.rooms.get(start, None)
+        if mid_room and first in mid_room.exits:
+            mid_id = mid_room.exits[first]
+            _, second = self.shortest_path(mid_id, goal)
+        else:
+            second = None
+
+        if second and second in _CARDINAL and second != first and second != _OPPOSITE.get(first):
+            # Two perpendicular cardinals → intercardinal.
+            pair = frozenset([first, second])
+            _COMBO = {
+                frozenset(["north", "east"]): "northeast",
+                frozenset(["north", "west"]): "northwest",
+                frozenset(["south", "east"]): "southeast",
+                frozenset(["south", "west"]): "southwest",
+            }
+            return _COMBO.get(pair, first)
+
+        return first
+
     # ------------------------------------------------------------------ #
     # Spawn system
     # ------------------------------------------------------------------ #
@@ -784,7 +821,7 @@ class GameState:
         else:
             m.aggression = max(m.aggression, 1)
 
-    def _choose_target(self):
+    def _choose_target(self) -> str:
         m = self.monster
         # Endgame: once the AI is overridden, it camps the antenna.
         if self.game_phase == "final_run":
@@ -800,12 +837,15 @@ class GameState:
         m.state = "searching"
         if m.known_hide_room and m.known_hide_room in self.rooms and self.rng.random() < 0.35:
             return m.known_hide_room
+        # Always maintain a wander target — the monster never stands still.
         if not m.target_room_id or m.target_room_id not in self.rooms or m.current_room_id == m.target_room_id:
             if self.rng.random() < 0.6:
                 m.target_room_id = self._random_room_near(self.current_room_id, 3)
             else:
-                m.target_room_id = self.rng.choice(list(self.rooms))
-        return m.target_room_id
+                m.target_room_id = self.rng.choice(
+                    [r for r in self.rooms if self.rooms[r].monster_allowed] or list(self.rooms)
+                )
+        return m.target_room_id or self.rng.choice(list(self.rooms))
 
     def _random_room_near(self, center, maxd):
         pool = [rid for rid in self.rooms if rid != center and (self.shortest_path(center, rid)[0] or 99) <= maxd]
@@ -813,10 +853,6 @@ class GameState:
 
     def _move_monster(self):
         m = self.monster
-        if m.is_distracted(self.turn_count):
-            m.state = "feeding"
-            return
-
         if m.current_room_id is None:
             return
 
@@ -831,18 +867,17 @@ class GameState:
             m.cryo_camp_turns = 0
 
         target = self._choose_target()
-        if target is None:
-            if self.rng.random() < 0.4:
-                neighbors = [dest for _, dest in self._neighbors(m.current_room_id, use_vents=False)]
-                if neighbors:
-                    m.current_room_id = self.rng.choice(neighbors)
-            return
-
         use_vents = m.can_use_vents and m.vent_cooldown == 0 and (m.aggression >= 2 or self.last_action_sound >= 3)
         if m.current_room_id != target:
             dist, first_dir = self.shortest_path(m.current_room_id, target, use_vents=use_vents)
             if first_dir is not None:
                 self._step_monster(first_dir, use_vents)
+            else:
+                # Unreachable target — pick a new wander destination immediately.
+                m.target_room_id = None
+        else:
+            # Reached the target — clear it so _choose_target picks a new one next turn.
+            m.target_room_id = None
 
     def _step_monster(self, direction, use_vents):
         m = self.monster
@@ -910,9 +945,14 @@ class GameState:
 
         m.searching_streak += 1
         spot = self.player.hidden_spot or {"quality": 0, "reuse": 0}
+        quality = spot.get("quality", 0)
+        reuse = spot.get("reuse", 0)
         overstay = max(0, m.searching_streak - 1)
-        chance = 10 + self.last_action_sound * 25 + overstay * 20 + spot.get("reuse", 0) * 8 - spot.get("quality", 0)
-        chance = max(4, min(chance, 96))
+        # Base detection: ~25% for a quality-30 spot (average locker/behind gear).
+        # Better spots lower it; sound, staying too long, and reusing the same spot raise it.
+        base = max(5, 55 - quality)
+        chance = base + self.last_action_sound * 20 + overstay * 15 + reuse * 10
+        chance = max(5, min(95, chance))
         roll = self.rng.randint(1, 100)
         if roll <= chance:
             self.death_state = "monster"
@@ -920,7 +960,7 @@ class GameState:
         if m.known_hide_room == self.current_room_id:
             m.known_hide_room = None
         m.target_room_id = None
-        if spot.get("reuse", 0) >= 2:
+        if reuse >= 2:
             return (
                 f"It goes straight to the {spot['name']}. It is learning your habits.\n"
                 "Its attention passes over you. This time."

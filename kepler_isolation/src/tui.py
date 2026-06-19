@@ -37,8 +37,35 @@ from engine import (
 )
 from player import Player
 
-# Compass glyphs for the tracker bearing.
-ARROWS = {"north": "↑", "south": "↓", "east": "→", "west": "←", "up": "▲", "down": "▼", "in": "⊙", "out": "⊗"}
+# Compass glyphs for the tracker bearing (cardinal + intercardinal).
+ARROWS = {
+    "north": "↑",
+    "south": "↓",
+    "east": "→",
+    "west": "←",
+    "northeast": "↗",
+    "northwest": "↖",
+    "southeast": "↘",
+    "southwest": "↙",
+    "up": "▲",
+    "down": "▼",
+    "in": "⊙",
+    "out": "⊗",
+}
+COMPASS_ABBR = {
+    "north": "N",
+    "south": "S",
+    "east": "E",
+    "west": "W",
+    "northeast": "NE",
+    "northwest": "NW",
+    "southeast": "SE",
+    "southwest": "SW",
+    "up": "UP",
+    "down": "DN",
+    "in": "IN",
+    "out": "OUT",
+}
 
 # Narrow terminals drop the sidebar so the log keeps priority.
 NARROW = 64
@@ -60,24 +87,15 @@ def tracker_markup(m: dict) -> str:
         return "[b red]◢ MOTION TRACKER ◣[/]\n[blink bold red]IT SEES YOU[/]"
     if k == "here":
         return "[b red]◢ MOTION TRACKER ◣[/]\n[bold red]CONTACT — THIS ROOM[/]"
-    # bearing
-    d = m["direction"] or "?"
-    dist = m["distance"]
-    meters = m.get("meters", dist * 15)
+    # bearing — meters is the single distance unit
+    d = m.get("direction") or "?"
+    meters = m.get("meters", 0)
     confidence = m.get("confidence", 70)
     motion_desc = m.get("motion_desc", "slow")
-    color = "red" if dist <= 2 else "yellow"
+    close = meters <= 30  # two rooms away or less
+    color = "red" if close else "yellow"
     arrow = ARROWS.get(d, "•")
-    compass = {
-        "north": "N",
-        "south": "S",
-        "east": "E",
-        "west": "W",
-        "up": "UP",
-        "down": "DN",
-        "in": "IN",
-        "out": "OUT",
-    }.get(d, d.upper())
+    compass = COMPASS_ABBR.get(d, d.upper())
     return (
         f"[{color}]◢ MOTION TRACKER ◣[/]\n"
         f"[{color}]{arrow}  {compass}[/]\n"
@@ -103,10 +121,13 @@ def status_markup(engine: GameEngine) -> str:
             c = "bold red"
         elif mt in ("interference", "lost", "none"):
             c = "dim"
-        elif mt.split()[-1].isdigit() and int(mt.split()[-1]) <= 2:
-            c = "red"
         else:
-            c = "yellow"
+            # motion_label now returns "NE ~75m" — color by distance in meters
+            try:
+                meters_val = int(mt.split("~")[1].replace("m", "").strip()) if "~" in mt else 999
+                c = "red" if meters_val <= 30 else "yellow"
+            except (IndexError, ValueError):
+                c = "yellow"
         parts.append(f"[dim]MOTION[/] [{c}]{mt}[/]")
     return "   ".join(parts)
 

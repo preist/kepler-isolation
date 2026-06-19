@@ -58,7 +58,8 @@ def test_motion_no_device_then_bearing():
     assert "confidence" in m
     assert "motion_desc" in m
     label = motion_label(m)
-    assert m["direction"] in label
+    assert label is not None
+    assert "~" in label and "m" in label  # unified meters display: e.g. "N ~75m"
 
 
 def test_win_via_full_radio_path():

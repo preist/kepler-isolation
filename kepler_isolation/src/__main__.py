@@ -145,10 +145,13 @@ class ClassicGame:
                 code = "1;31"
             elif motion in ("interference", "lost", "none"):
                 code = "2"
-            elif motion[-1:].isdigit() and int(motion.split()[-1]) <= 2:
-                code = "31"
             else:
-                code = "33"
+                # motion_label now returns e.g. "NE ~75m" — color by distance
+                try:
+                    meters_val = int(motion.split("~")[1].replace("m", "").strip()) if "~" in motion else 999
+                    code = "1;31" if meters_val <= 30 else "33"
+                except (IndexError, ValueError):
+                    code = "33"
             parts.append(f"{self.c('Motion:', '2')} {self.c(motion, code)}")
         return self.c(" | ", "2").join(parts)
 

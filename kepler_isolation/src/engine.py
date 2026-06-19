@@ -391,9 +391,11 @@ class GameEngine:
             return {"kind": "lost"}
         if tracked == gs.current_room_id:
             return {"kind": "here"}
-        dist, direction = gs.shortest_path(gs.current_room_id, tracked)
+        dist, _ = gs.shortest_path(gs.current_room_id, tracked)
         if dist is None:
             return {"kind": "lost"}
+        # Intercardinal compass (NE/SW etc.) from two-hop lookahead.
+        direction = gs.compass_direction(gs.current_room_id, tracked)
         meters = dist * 15
         confidence = max(20, min(90, 90 - dist * 8))
         if self.player.type == "synthetic":
@@ -407,11 +409,27 @@ class GameEngine:
         return {
             "kind": "bearing",
             "direction": direction,
-            "distance": dist,
             "meters": meters,
             "confidence": confidence,
             "motion_desc": motion_desc,
         }
+
+
+# Compact abbreviations for every compass string the scanner can return.
+_COMPASS_ABBR: dict[str, str] = {
+    "north": "N",
+    "south": "S",
+    "east": "E",
+    "west": "W",
+    "northeast": "NE",
+    "northwest": "NW",
+    "southeast": "SE",
+    "southwest": "SW",
+    "up": "UP",
+    "down": "DN",
+    "in": "IN",
+    "out": "OUT",
+}
 
 
 def motion_label(m: dict) -> str | None:
@@ -425,5 +443,6 @@ def motion_label(m: dict) -> str | None:
     if kind == "here":
         return "HERE"
     if kind == "bearing":
-        return f"{m['direction']} {m['distance']}"
+        abbr = _COMPASS_ABBR.get(m.get("direction") or "", "?")
+        return f"{abbr} ~{m['meters']}m"
     return kind  # none / interference / lost

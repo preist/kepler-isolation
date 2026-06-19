@@ -942,14 +942,10 @@ class Parser:
     # Observation
     # ------------------------------------------------------------------ #
     def handle_look(self) -> str:
+        # Return empty — the front-end calls render_room() / _write_room() directly
+        # when it sees the "look" command, so we never want a duplicate render here.
         self._meta()
-        room = self.game_state.current_room
-        out = [room.name, room.describe(self.game_state)]
-        if room.exits:
-            out.append("Exits: " + ", ".join(room.exits.keys()))
-        if room.items:
-            out.append("Items: " + ", ".join(i.name for i in room.items))
-        return "\n".join(out)
+        return ""
 
     def handle_examine(self, words: list[str]) -> str:
         if not words:
@@ -1183,6 +1179,11 @@ class Parser:
         self.player.remove_from_inventory(item)
         self.game_state.current_room.items.append(item)
         self._act(1)
+        # Dropping the hand terminal disables the scanner.
+        if item.name == "hand terminal":
+            self.player.has_terminal = False
+            self.game_state.set_flag("has_terminal", False)
+            return "You set down the hand terminal.\nThe scanner goes dark."
         return f"You set down the {item.name}."
 
     def handle_inventory(self) -> str:
@@ -1304,6 +1305,21 @@ class Parser:
 
     # ------------------------------------------------------------------ #
     # Scanner
+    _COMPASS_ABBR: dict[str, str] = {
+        "north": "N",
+        "south": "S",
+        "east": "E",
+        "west": "W",
+        "northeast": "NE",
+        "northwest": "NW",
+        "southeast": "SE",
+        "southwest": "SW",
+        "up": "UP",
+        "down": "DN",
+        "in": "IN",
+        "out": "OUT",
+    }
+
     # ------------------------------------------------------------------ #
     def handle_scan(self) -> str:
         if not self.player.has_terminal:
@@ -1338,12 +1354,12 @@ class Parser:
                 "HAND TERMINAL:\n"
                 "Contact — this room.\n\n"
                 "Direction: HERE\n"
-                "Distance: 0 meters\n"
+                "Distance: 0 m\n"
                 "Motion: present\n"
                 "Confidence: 100%"
             )
 
-        dist, direction = gs.shortest_path(gs.current_room_id, tracked)
+        dist, _ = gs.shortest_path(gs.current_room_id, tracked)
         if dist is None:
             return "HAND TERMINAL:\nSignal lost.\n\nDirection: —\nDistance: —"
 
@@ -1358,22 +1374,13 @@ class Parser:
                 "Confidence: low"
             )
 
+        direction = gs.compass_direction(gs.current_room_id, tracked)
         meters = dist * 15
         confidence = max(20, min(90, 90 - dist * 8))
         if self.player.type == "synthetic":
             confidence = min(95, confidence + 10)
 
-        compass = {
-            "north": "N",
-            "south": "S",
-            "east": "E",
-            "west": "W",
-            "up": "UP",
-            "down": "DOWN",
-            "in": "IN",
-            "out": "OUT",
-        }.get(direction or "", "?")
-
+        compass = self._COMPASS_ABBR.get(direction or "", "?")
         motion_desc = {
             "feeding": "still",
             "searching": "slow",
@@ -1385,7 +1392,7 @@ class Parser:
             "HAND TERMINAL:\n"
             "Unknown biological mass detected.\n\n"
             f"Direction: {compass}\n"
-            f"Distance: ~{meters} meters\n"
+            f"Distance: ~{meters} m\n"
             f"Motion: {motion_desc}\n"
             f"Confidence: {confidence}%"
         )
