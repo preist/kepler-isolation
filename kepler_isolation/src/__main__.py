@@ -31,6 +31,7 @@ from engine import (
     ROLE_FLAVOR,
     GameEngine,
     motion_label,
+    parse_role,
 )
 from player import Player
 
@@ -113,7 +114,11 @@ class ClassicGame:
         print("  1. Crew        — Mara Vale")
         print("  2. Synthetic   — Valdorf")
         print("  3. Contractor  — Jonah Rusk")
-        choice = input("> ").strip()
+        while True:
+            choice = parse_role(input("> ").strip())
+            if choice:
+                break
+            print("Unrecognised. Type 1, 2, or 3 — or a name: mara, valdorf, jonah.")
         player = self.engine.new_game(choice)
         label = player.type.replace("_", " ").title()
         print(f"\n{player.name}. {label}.")
@@ -303,6 +308,7 @@ Usage:
   ./play [options]          (or: python3 src/__main__.py [options])
 
 Options:
+  --gui         Launch the PySide6 windowed GUI (needs: pip install PySide6).
   --tui         Launch the rich Textual UI (needs: pip install textual).
   --classic     Force the plain text mode (the default).
   --fast        Skip the typewriter pacing on dramatic beats.
@@ -316,6 +322,14 @@ In-game, type 'help' for the command list."""
 def main():
     if "--help" in sys.argv or "-h" in sys.argv:
         print(USAGE)
+        return
+    if "--gui" in sys.argv and "--classic" not in sys.argv:
+        try:
+            import gui
+        except ImportError as exc:
+            print(f"The GUI needs PySide6:  pip install PySide6  ({exc})")
+            return
+        gui.run()
         return
     if "--tui" in sys.argv and "--classic" not in sys.argv:
         try:
