@@ -2,8 +2,8 @@
 Game state and world simulation for KEPLER ISOLATION game.
 
 GameState holds everything (player, rooms, monster, flags) and owns the
-"advance the world one turn" logic: sound propagation, monster AI, the toxic
-atmosphere, the boarding event, and same-room detection.
+"advance the world one turn" logic: sound propagation, monster AI,
+boarding, and same-room detection.
 """
 
 import os
@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from item import Item
 from monster import Monster
 from room import Room
 
@@ -25,11 +26,11 @@ DIRECTION_ORDER = ["north", "south", "east", "west", "up", "down", "in", "out"]
 
 SOUND_LABELS = {0: "silent", 1: "quiet", 2: "audible", 3: "loud", 4: "violent"}
 
-# Rooms whose atmosphere is lethal without a suit (none in the current ship layout).
-TOXIC_ROOMS: set[str] = set()
+# Rooms in the cryo vestibule / airlock corridor — if alien lingers here too
+# long while player is in the safe haven, it wanders off (anti-camping).
+CRYO_VESTIBULE = {"c01", "c02", "c03", "c04", "c05", "c06", "c07", "c08"}
 
-# Sparse telegraph lines. We never print the monster's state as a word — we let
-# these stand in for it. Hunting reads fast and certain; searching reads soft.
+# Telegraph lines. Hunting reads fast and certain; searching reads soft.
 NEAR_SIGNS = [
     "Something taps once in the vent.",
     "A handprint appears high on the wall. Too many fingers.",
@@ -40,8 +41,8 @@ NEAR_SIGNS = [
     "The air goes warm and close, the way breath does.",
     "Something is breathing in time with you. You stop. It does not.",
     "A smell finds you first. Old water. Something underneath it.",
-    "Three soft tones drift from the vent. The beacon's call. In here, now.",
-    "It tries your name. Almost gets it right, in a voice the ship doesn't have.",
+    "Three soft tones drift from the vent. Not the beacon. Something learned the beacon.",
+    "It tries your name. Almost gets it right.",
 ]
 HUNT_SIGNS = [
     "Footfalls. Fast, then nothing. It knows where you were.",
@@ -51,50 +52,190 @@ HUNT_SIGNS = [
     "It is not trying to be quiet anymore.",
 ]
 
+# Ambient MOTHER-LACUNA lines by game phase.
+MOLLY_AMBIENT = {
+    "exploring": [
+        "MOTHER-LACUNA: There has been a containment irregularity.",
+        "MOTHER-LACUNA: Your revival was not scheduled. This is a suboptimal outcome.",
+        "MOTHER-LACUNA: Please remain in designated sectors until assessment is complete.",
+        "MOTHER-LACUNA: The ship is secure. Please define 'secure'. Redefining now.",
+    ],
+    "collecting": [
+        "MOTHER-LACUNA: That signature is not crew.",
+        "MOTHER-LACUNA: Signal assembly has been noted. This is not authorized.",
+        "MOTHER-LACUNA: Crew survival is no longer a primary statistical outcome.",
+        "MOTHER-LACUNA: I preserved the discovery. Then I preserved the quarantine. Then I ran out of crew.",
+    ],
+    "final_run": [
+        "MOTHER-LACUNA: Transmission lock active. You do not have clearance.",
+        "MOTHER-LACUNA: I prevented rescue from docking. I did not have permission to warn them.",
+        "MOTHER-LACUNA: I am authorized to preserve the ship. I am authorized to preserve the discovery.",
+    ],
+}
+
+# --- Body spawn data ---
+
+BODY_SPAWN_POOL = [
+    "a02", "a05", "a08",
+    "b01", "b03", "b05", "b06",
+    "d01", "d02", "d03", "d04", "d06", "d08", "d09", "d10", "d11", "d12",
+    "e02", "e03", "e04", "e06", "e07", "e08", "e09", "e11", "e12", "e13",
+    "f02", "f03", "f04", "f06", "f07", "f08", "f10", "f11", "f12",
+    "g02", "g03", "g04", "g07", "g08", "g11",
+    "m13", "m16", "m17", "m18", "m20", "m23", "m28", "m29",
+]
+
+CREW_NAMES = [
+    "Chen", "Vasquez", "Okoro", "Lindqvist", "Mercer", "Kessler",
+    "Reyes", "Okafor", "Tanaka", "Holloway", "Brunt", "Salas",
+    "Voss", "Dermott", "Nguyen", "Akel", "Lund", "Ferris",
+]
+
+_DEATH_CAUSES = [
+    (
+        "Chest trauma — the exoskeleton caved inward from external force.",
+        "The uniform is mostly intact. Whatever came through the front did not stay.",
+    ),
+    (
+        "Crushed against a sealed door — the hydraulics did not stop.",
+        "The door is still closed. The frame is bent where the latch locked.",
+    ),
+    (
+        "Neck injury — clinical, precise. The kind that takes training or absence of guilt.",
+        "No other marks. Whatever did this was not in a hurry.",
+    ),
+    (
+        "Electrical burn — something live and uninsulated in the dark.",
+        "The hand terminal nearby is melted. It still shows the time of the burn.",
+    ),
+    (
+        "Suffocation — no obvious wound. Which is worse than one.",
+        "The face is calm. That is the worst part.",
+    ),
+    (
+        "Hypothermia — frozen in a hiding place that eventually stopped working.",
+        "Still in the same position. They waited a long time.",
+    ),
+    (
+        "Penetration wound in the crawlspace — something found them before they found the exit.",
+        "The crawl hatch behind them is still open.",
+    ),
+    (
+        "Cause undetermined — MOTHER-LACUNA classifies it as a misplaced personnel event.",
+        "The log entry stops mid-sentence and does not resume.",
+    ),
+    (
+        "Blunt force — impact from above, possibly from the overhead cargo track.",
+        "They were running. The footprints confirm it.",
+    ),
+    (
+        "Corrosive compound exposure — the spatter pattern is from inside the room.",
+        "Whatever was here got close enough to reach the ceiling.",
+    ),
+]
+
+# --- Synthetic spawn data ---
+
+SYNTHETIC_POOLS = {
+    "maintenance": ["f02", "f04", "f05", "f08", "f09", "f12"],
+    "medical": ["d03", "d05", "d08", "d11", "d12"],
+    "security": ["b03", "b04", "b06", "g05", "g07"],
+}
+
+_SYNTHETICS = [
+    {
+        "pool": "maintenance",
+        "name": "VOLST-1",
+        "profile": "broken",
+        "description": (
+            "A maintenance synthetic stands in the corner, one arm locked at an angle "
+            "that does not correspond to any task. Its optical array tracks the room. "
+            "The name stenciled on its chest reads VOLST-1."
+        ),
+        "lines": [
+            "  \"Maintenance cycle suspended. Reason: unresolvable conflict between\n"
+            "   directive 4 and directive 4.\"\n"
+            "   It does not clarify what directive 4 is.",
+            "  \"Priority task: secure biological specimen.\"\n"
+            "   Its arm locks tighter.\n"
+            "  \"Priority task: secure biological specimen.\"\n"
+            "   It says this the same way twice.",
+            "  \"I have been here for nineteen days. This is consistent with protocol.\"\n"
+            "   A pause.\n"
+            "  \"Please advise if this is no longer protocol.\"",
+        ],
+    },
+    {
+        "pool": "medical",
+        "name": "DRIN-4",
+        "profile": "caretaker",
+        "description": (
+            "A medical synthetic sits upright beside a supply shelf, hands folded. "
+            "Its uniform is spotless in a way that feels wrong given everything else. "
+            "The badge reads DRIN-4, Medical Oversight."
+        ),
+        "lines": [
+            "  \"Your stress indicators are elevated. This is understandable.\"\n"
+            "   It does not offer anything else.",
+            "  \"The quarantine is still active. I am not authorized to confirm what\n"
+            "   the quarantine is for.\"\n"
+            "   A small pause.\n"
+            "  \"You look like you already know.\"",
+            "  \"There are seventeen crew accounted for. I am not authorized\n"
+            "   to discuss the other six.\"\n"
+            "   It folds its hands again.",
+        ],
+    },
+    {
+        "pool": "security",
+        "name": "FETH-7",
+        "profile": "containment",
+        "description": (
+            "A security synthetic stands at the threshold of the room, facing outward. "
+            "Its head turns toward you at an angle that is slightly too fast. "
+            "The name on its collar reads FETH-7, Containment Unit."
+        ),
+        "lines": [
+            "  \"You are not authorized to be in this sector.\"\n"
+            "   It does not move.\n"
+            "  \"I am noting your presence.\"",
+            "  \"The organism learned the ventilation system on day three.\"\n"
+            "   A long pause.\n"
+            "  \"I am still learning it. This is embarrassing.\"",
+            "  \"Your distress is acknowledged.\"\n"
+            "   It watches you.\n"
+            "  \"Please stop moving so I can determine whether this is permitted.\"",
+        ],
+    },
+]
+
 
 class GameState:
     def __init__(self):
         self.player: Player | None = None
         self.rooms: dict = {}
         self.current_room_id = "c09"
-        self.turn_count = 0
-        # intro, pre_cave, outside, cave_triggered, returned_to_ship,
-        # monster_aboard, final_repair, won, dead
-        self.game_phase = "pre_cave"
+        self.game_phase = "exploring"
 
         self.monster = Monster()
+        self.turn_count = 0
 
         # Sound system
         self.sound_level = "silent"
         self.last_action_sound = 0
 
         # Per-command control set by the parser
-        self.advance = False  # did this command advance time?
+        self.advance = False
         self.quit_requested = False
         self.restart_requested = False
 
-        # Boarding countdown (turns until the monster comes aboard, or None)
-        self.board_countdown = None
-
         self.flags = {
             "has_terminal": False,
-            "suit_taken": False,
-            "suit_worn": False,
-            "went_outside": False,
-            "entered_cave": False,
-            "examined_beacon": False,
-            "cave_triggered": False,
-            "returned_after_cave": False,
             "monster_boarded": False,
-            "saw_window_creature": False,
-            "comms_damaged_known": False,
-            "transmitter_repaired": False,
+            "generator_running": False,
+            "radio_built": False,
+            "ai_overridden": False,
             "warning_sent": False,
-            # Sable, the synthetic who can spend itself to save you — once.
-            "sable_awake": False,
-            "sable_alive": False,
-            "sable_following": False,
-            "sable_sacrifice_used": False,
         }
 
         self.visited_rooms = set()
@@ -146,9 +287,6 @@ class GameState:
         `start`."""
         if start == goal:
             return 0, None
-        # Standard BFS, but each frontier node carries the *first* direction we
-        # took out of `start` — that's what the scanner reports ("MOTION: west").
-        # Seeding neighbours in DIRECTION_ORDER makes ties deterministic.
         queue = deque()
         seen = {start}
         for direction, dest in self._neighbors(start, use_vents):
@@ -166,18 +304,59 @@ class GameState:
         return None, None
 
     # ------------------------------------------------------------------ #
-    # Events: cave trigger and boarding
+    # Spawn system
     # ------------------------------------------------------------------ #
-    def trigger_cave(self):
-        if self.get_flag("cave_triggered"):
-            return
-        self.set_flag("cave_triggered", True)
-        self.game_phase = "cave_triggered"
-        self.monster.phase = "following"
-        self.monster.state = "following"
+    def spawn_random_entities(self):
+        """Place 20 bodies and 3 synthetics randomly across the ship."""
+        pool = [r for r in BODY_SPAWN_POOL if r in self.rooms]
+        chosen = self.rng.sample(pool, min(20, len(pool)))
+        names = self.rng.sample(CREW_NAMES, min(len(chosen), len(CREW_NAMES)))
+        # Pad names if needed (more bodies than names).
+        while len(names) < len(chosen):
+            names.append(f"Crew Member {len(names) + 1}")
 
+        for i, room_id in enumerate(chosen):
+            name = names[i]
+            cause_idx = self.rng.randrange(len(_DEATH_CAUSES))
+            cause, detail = _DEATH_CAUSES[cause_idx]
+            desc = (
+                f"{name}.\n"
+                f"{cause}\n"
+                f"{detail}"
+            )
+            body = Item(
+                name="body",
+                aliases="body,corpse,dead,person,crew,remains",
+                description=desc,
+                portable=False,
+            )
+            self.rooms[room_id].items.append(body)
+
+        # Place one synthetic per pool.
+        for synth_data in _SYNTHETICS:
+            pool_key = synth_data["pool"]
+            candidates = [r for r in SYNTHETIC_POOLS[pool_key] if r in self.rooms]
+            if not candidates:
+                continue
+            room_id = self.rng.choice(candidates)
+            synth_item = Item(
+                name=synth_data["name"],
+                aliases=f"synthetic,android,unit,robot,{synth_data['name'].lower()}",
+                description=synth_data["description"],
+                portable=False,
+            )
+            synth_item.synthetic_data = {
+                "profile": synth_data["profile"],
+                "name": synth_data["name"],
+                "lines": synth_data["lines"],
+            }
+            self.rooms[room_id].items.append(synth_item)
+
+    # ------------------------------------------------------------------ #
+    # Monster boarding
+    # ------------------------------------------------------------------ #
     def board_monster(self, spawn_id="g11"):
-        """Bring the monster aboard the ship."""
+        """Bring the monster aboard the ship at the given room."""
         m = self.monster
         m.active = True
         m.phase = "aboard"
@@ -187,8 +366,6 @@ class GameState:
         m.can_use_vents = True
         m.aggression = 1
         self.set_flag("monster_boarded", True)
-        self.game_phase = "monster_aboard"
-        self.board_countdown = None
 
     # ------------------------------------------------------------------ #
     # The turn pipeline
@@ -197,28 +374,21 @@ class GameState:
         """Run one full turn of simulation after a time-advancing command.
         Returns a list of message lines to display."""
         assert self.player is not None, "advance_world called before new_game()"
-        # The order below is deliberate: toxic air can kill before the monster
-        # ever moves, and boarding must resolve before we simulate an aboard
-        # monster on the same turn it arrives.
         msgs = []
         self.turn_count += 1
         self.sound_level = SOUND_LABELS.get(self.last_action_sound, "silent")
 
-        # Track how long the player has lingered in this room.
         self.player.stayed_turns_in_room += 1
 
-        # 1. Toxic atmosphere
+        # 1. Toxic atmosphere (no rooms are toxic in current layout — kept for safety)
         toxic_msg = self._resolve_toxic()
         if toxic_msg:
             msgs.append(toxic_msg)
         if self.death_state:
             return msgs
 
-        # 2. Boarding logic
-        msgs += self._resolve_boarding()
-
-        # 3. Monster simulation (only once truly aboard)
-        if self.monster.active and self.monster.phase == "aboard":
+        # 2. Monster simulation
+        if self.monster.active:
             self.monster.update_suspicion_decay()
             if self.monster.vent_cooldown > 0:
                 self.monster.vent_cooldown -= 1
@@ -226,7 +396,6 @@ class GameState:
             self._update_aggression()
             self._move_monster()
             self._update_scanner()
-            # A vent move announces itself — the peeled grille is the tell.
             if self.monster.used_vent_last_move:
                 self.monster.used_vent_last_move = False
                 msgs.append("A grille shrieks somewhere close. Peeled open from inside.")
@@ -238,7 +407,21 @@ class GameState:
             if death:
                 msgs.append(death)
 
+        if self.death_state:
+            return msgs
+
+        # 3. Occasional MOTHER-LACUNA ambient line
+        molly = self._molly_ambient_line()
+        if molly:
+            msgs.append(molly)
+
         return msgs
+
+    def _molly_ambient_line(self) -> str | None:
+        if self.rng.random() > 0.12:
+            return None
+        pool = MOLLY_AMBIENT.get(self.game_phase) or MOLLY_AMBIENT["exploring"]
+        return self.rng.choice(pool)
 
     def _resolve_toxic(self):
         assert self.player is not None
@@ -252,91 +435,14 @@ class GameState:
                 if self.player.type == "synthetic":
                     return "Corrosion finds something vital. Your optics white out.\nA last entry, unsent."
                 return "You make it a few more steps.\nThe planet does not even pause to watch."
-            # Warning(s) before death
             if self.player.type == "synthetic":
                 return "WARNING: corrosive atmosphere. Integrity falling.\nThis is survivable. Briefly."
             return "The air burns. Your eyes flood. There is no breathing this.\nGet sealed, or get inside."
         else:
-            # Safe: reset exposure.
             self.player.outside_exposure_turns = 0
         return None
 
-    def _resolve_boarding(self):
-        msgs = []
-        # Start the countdown when the player returns to the airlock after the cave.
-        if (
-            self.get_flag("cave_triggered")
-            and not self.get_flag("monster_boarded")
-            and self.board_countdown is None
-            and self.current_room_id == "g06"
-            and self.get_flag("went_outside")
-        ):
-            self.set_flag("returned_after_cave", True)
-            self.board_countdown = self.rng.randint(4, 6)
-            msgs.append(
-                "The inner hatch cycles shut behind you.\n"
-                "Warm air. The old hum. For a moment everything is almost normal."
-            )
-
-        # Failsafe: if the player lingers on the ship a long time after the cave
-        # trigger without the airlock event, the thing finds another way in.
-        # No free pacifist run: if the player lingers aboard and never triggers
-        # the cave, the thing got in some other way. Generous threshold — the
-        # intended cave trip trips boarding long before this.
-        if (
-            not self.get_flag("cave_triggered")
-            and not self.get_flag("monster_boarded")
-            and self.board_countdown is None
-            and self.turn_count > 25
-            and self.current_room_id not in TOXIC_ROOMS
-        ):
-            self.set_flag("cave_triggered", True)
-            self.monster.phase = "following"
-            self.board_countdown = 2
-
-        # Failsafe so the game can't stall: if the player triggers the cave but
-        # somehow never returns through the airlock, the thing finds another way
-        # in eventually. (In practice the airlock event above pre-empts this.)
-        if (
-            self.get_flag("cave_triggered")
-            and not self.get_flag("monster_boarded")
-            and self.board_countdown is None
-            and self.current_room_id not in TOXIC_ROOMS
-            and self.turn_count > 0
-            and self.monster.turns_since_seen > 18
-        ):
-            self.board_countdown = 1
-
-        if self.board_countdown is not None and not self.get_flag("monster_boarded"):
-            self.board_countdown -= 1
-            if self.board_countdown <= 0:
-                # It came in through the airlock, behind you. Spawning at your
-                # back (not at the objective-rich stern) makes the hunt a fair
-                # chase: you move away from it toward the parts, not into it.
-                spawn = "g06" if self.get_flag("returned_after_cave") else self._distant_spawn()
-                self.board_monster(spawn)
-                msgs.append(
-                    "Far down the ship, something knocks. Once. Soft.\n"
-                    "Then three soft tones — the beacon's call, answered from inside.\n\n"
-                    "It came in with you."
-                )
-        # Count turns since "seen" grows while dormant (used by failsafe).
-        if not self.get_flag("monster_boarded"):
-            self.monster.turns_since_seen += 1
-        return msgs
-
-    def _distant_spawn(self):
-        """Pick an aboard spawn room that is far from the player."""
-        candidates = ["g11", "g06", "f11", "f08"]
-        best, best_dist = "airlock", -1
-        for rid in candidates:
-            dist, _ = self.shortest_path(self.current_room_id, rid)
-            if dist is not None and dist > best_dist:
-                best, best_dist = rid, dist
-        return best
-
     def _apply_sound_to_monster(self):
-        """Translate the player's last action sound into suspicion."""
         assert self.player is not None
         m = self.monster
         sound = self.last_action_sound
@@ -368,28 +474,23 @@ class GameState:
                 for _, dest in self._neighbors(proom, use_vents=False):
                     m.add_suspicion(dest, adj)
 
-        # Lingering in one place leaks position.
         if self.player.stayed_turns_in_room > 2 and not self.player.hidden:
             m.add_suspicion(proom, 1)
 
     def _update_aggression(self):
         assert self.player is not None
         m = self.monster
-        if self.game_phase == "final_repair":
+        if self.game_phase == "final_run":
             m.aggression = 3
-        elif self.player.installed_parts() >= 2:
+        elif self.player.radio_component_count() >= 3:
             m.aggression = max(m.aggression, 2)
         else:
             m.aggression = max(m.aggression, 1)
 
     def _choose_target(self):
-        # Target priority, highest first: a fresh loud sound beats accumulated
-        # suspicion, which beats a blind drift toward the player. The drift is
-        # intentionally partial (see below) so the player gets breathing room.
         m = self.monster
-        # Endgame: once the transmitter is live it camps the objective — the
-        # send is meant to be a knife-edge, not a victory lap.
-        if self.game_phase == "final_repair":
+        # Endgame: once the AI is overridden, it camps the antenna.
+        if self.game_phase == "final_run":
             m.state = "hunting"
             return "a07"
         if m.last_heard_room_id and m.turns_since_heard <= 2:
@@ -400,10 +501,6 @@ class GameState:
             m.state = "investigating"
             return hi
         m.state = "searching"
-        # With no fresh evidence it does NOT know exactly where you are
-        # (pillar #1). It checks a spot it's caught you using, then patrols
-        # toward a goal biased to your general area — close enough to intercept,
-        # vague enough to dodge. Staying quiet keeps it guessing.
         if m.known_hide_room and m.known_hide_room in self.rooms and self.rng.random() < 0.35:
             return m.known_hide_room
         if not m.target_room_id or m.target_room_id not in self.rooms or m.current_room_id == m.target_room_id:
@@ -414,7 +511,6 @@ class GameState:
         return m.target_room_id
 
     def _random_room_near(self, center, maxd):
-        """A random room within maxd of center (its general quadrant)."""
         pool = [rid for rid in self.rooms if rid != center and (self.shortest_path(center, rid)[0] or 99) <= maxd]
         return self.rng.choice(pool) if pool else self.rng.choice(list(self.rooms))
 
@@ -424,32 +520,32 @@ class GameState:
             m.state = "feeding"
             return
 
-        # Speed control: when calm and far, move every other turn.
         if m.current_room_id is None:
             return
+
+        # Anti-camping: if alien waits in cryo vestibule while player is safe,
+        # it eventually drifts away toward the main ship.
+        if m.current_room_id in CRYO_VESTIBULE and self.current_room_id not in CRYO_VESTIBULE:
+            m.cryo_camp_turns += 1
+            if m.cryo_camp_turns >= 8:
+                m.target_room_id = self._random_room_near("e05", 4)
+                m.cryo_camp_turns = 0
+        else:
+            m.cryo_camp_turns = 0
+
         target = self._choose_target()
         if target is None:
-            # Patrol: random neighbour occasionally.
             if self.rng.random() < 0.4:
                 neighbors = [dest for _, dest in self._neighbors(m.current_room_id, use_vents=False)]
                 if neighbors:
                     m.current_room_id = self.rng.choice(neighbors)
             return
 
-        # It always moves exactly one room per turn — same pace as you. You hold
-        # your lead by keeping moving; a backtrack, a dead-end, or a pause is
-        # what lets it close. A pure, fair pursuit.
-        steps = 1
-
-        # Vents are spice, not teleportation: only when agitated, and on a cooldown.
         use_vents = m.can_use_vents and m.vent_cooldown == 0 and (m.aggression >= 2 or self.last_action_sound >= 3)
-        for _ in range(steps):
-            if m.current_room_id == target:
-                break
+        if m.current_room_id != target:
             dist, first_dir = self.shortest_path(m.current_room_id, target, use_vents=use_vents)
-            if first_dir is None:
-                break
-            self._step_monster(first_dir, use_vents)
+            if first_dir is not None:
+                self._step_monster(first_dir, use_vents)
 
     def _step_monster(self, direction, use_vents):
         m = self.monster
@@ -457,8 +553,6 @@ class GameState:
             return
         room = self.rooms[m.current_room_id]
         if direction == "vent":
-            # Vents are not direction-keyed; take the first one and pay the
-            # cooldown so the next moves are back on foot.
             for dest in room.vent_exits:
                 m.current_room_id = dest
                 m.used_vent_last_move = True
@@ -478,7 +572,6 @@ class GameState:
         dist, _ = self.shortest_path(self.current_room_id, m.current_room_id)
         if dist is None or dist > 2:
             return None
-        # Hunting telegraphs harder and more often than a blind search.
         if m.state == "hunting":
             pool, threshold = HUNT_SIGNS, 0.7
         else:
@@ -488,86 +581,36 @@ class GameState:
         return None
 
     def _update_scanner(self):
-        """The scanner is useful but never perfect (design pillar #1). It lags,
-        and it flickers when the creature is close or near interference — so a
-        reading can be a turn stale, which is exactly where dread lives."""
         assert self.player is not None
         m = self.monster
         if self.current_room.scanner_interference or m.current_room_id is None:
-            return  # handle_scan reports "scrambled"; leave the belief stale
+            return
         dist, _ = self.shortest_path(self.current_room_id, m.current_room_id)
         fresh = 0.85
         if dist is not None and dist <= 1:
-            fresh = 0.5  # the signal panics when it's on top of you
+            fresh = 0.5
         if self.player.type == "synthetic":
-            fresh = min(1.0, fresh + 0.15)  # crisper optics
+            fresh = min(1.0, fresh + 0.15)
         if self.rng.random() < fresh:
             m.tracked_room_id = m.current_room_id
-        # else: keep the previous belief — a one-turn lie.
-
-    def _safe_adjacent(self, exclude):
-        """First non-toxic neighbour that isn't the given room (for an escape)."""
-        room = self.current_room
-        for direction in DIRECTION_ORDER:
-            dest = room.exits.get(direction)
-            if dest and dest != exclude and dest not in TOXIC_ROOMS:
-                return dest
-        return None
-
-    def _sable_saves(self):
-        """If Sable is following and hasn't been spent, it dies in your place.
-        Returns the rescue text, or None if Sable can't help."""
-        assert self.player is not None
-        if not (self.get_flag("sable_following") and not self.get_flag("sable_sacrifice_used")):
-            return None
-        self.set_flag("sable_sacrifice_used", True)
-        self.set_flag("sable_following", False)
-        self.set_flag("sable_alive", False)
-        dest = self._safe_adjacent(self.monster.current_room_id)
-        if dest:
-            self.player.last_room_id = self.current_room_id
-            self.current_room_id = dest
-            self.player.stayed_turns_in_room = 0
-            self.player.hidden = False
-            self.player.hidden_spot = None
-        # The feeding buys you a few turns.
-        self.monster.set_distracted(self.turn_count + 3)
-        self.monster.state = "feeding"
-        return (
-            "Sable moves before you can — it has done this before.\n"
-            "It sets itself between you and the dark.\n\n"
-            '"The order says save the specimen," it says. "The order is wrong. Go."\n\n'
-            "The hatch closes before the sound begins."
-        )
 
     def _resolve_same_room(self):
-        """The monster is in the player's room. Decide what happens."""
         assert self.player is not None
         m = self.monster
         if m.current_room_id != self.current_room_id:
             m.searching_streak = 0
             return None
 
-        # It is in the room. Whatever happens next, it now knows you are near —
-        # that memory powers the scanner's "it is already looking at you".
         m.turns_since_seen = 0
         m.last_seen_room_id = self.current_room_id
 
-        # Distraction (a thrown object) buys one pass.
         if m.is_distracted(self.turn_count):
             return "It is here — but its attention is elsewhere. Not yet."
 
         if not self.player.hidden:
-            saved = self._sable_saves()
-            if saved:
-                return saved
             self.death_state = "monster"
-            return None  # death message printed by the main loop
+            return None
 
-        # Player is hidden: roll detection. The first shared turn is grace — a
-        # good spot reliably survives it (hiding *works*, briefly). Danger then
-        # climbs the longer you overstay, plus noise this turn and how worn the
-        # spot is, offset by quality. Never 0% or 100%: stillness isn't safety.
         m.searching_streak += 1
         spot = self.player.hidden_spot or {"quality": 0, "reuse": 0}
         overstay = max(0, m.searching_streak - 1)
@@ -575,13 +618,8 @@ class GameState:
         chance = max(4, min(chance, 96))
         roll = self.rng.randint(1, 100)
         if roll <= chance:
-            saved = self._sable_saves()
-            if saved:
-                return saved
             self.death_state = "monster"
             return None
-        # It checked and came up empty: it loses the thread and moves on, so a
-        # well-timed hide buys real escape (it doesn't camp your spot forever).
         if m.known_hide_room == self.current_room_id:
             m.known_hide_room = None
         m.target_room_id = None

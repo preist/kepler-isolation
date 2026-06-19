@@ -19,12 +19,16 @@ from parser import Parser  # noqa: E402
 from player import Player  # noqa: E402
 
 
-def build_game(player_type="human", seed=0):
+def build_game(player_type="crew", seed=0):
     gs = GameState()
     gs.rng = random.Random(seed)
     gs.rooms = create_rooms()
-    gs.player = Player("Test", "n", player_type)
-    gs.current_room_id = "cockpit"
+    gs.player = Player("Test", "neutral", player_type)
+    gs.current_room_id = "c09"
+    gs.rooms["c09"].visited = True
+    gs.visited_rooms.add("c09")
+    # Monster starts at aft of ship — same as real new_game().
+    gs.board_monster("g11")
     parser = Parser(gs)
     return gs, parser
 

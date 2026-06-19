@@ -139,7 +139,7 @@ class ClassicGame:
         if motion is not None:
             if motion in ("SEEN", "HERE"):
                 code = "1;31"
-            elif motion in ("interference", "lost", "outside", "none"):
+            elif motion in ("interference", "lost", "none"):
                 code = "2"
             elif motion[-1:].isdigit() and int(motion.split()[-1]) <= 2:
                 code = "31"
@@ -284,8 +284,8 @@ class ClassicGame:
 
 USAGE = """KEPLER ISOLATION — a terminal survival-horror text adventure.
 
-  You land on a toxic planet, explore a cave, and come back with a passenger.
-  Reach Communications, repair the transmitter, and send the warning.
+  You wake aboard the USCSS Nightglass. Something else woke too.
+  Collect radio components, craft a signal, override the AI, and send the warning.
 
 Usage:
   ./play [options]          (or: python3 src/__main__.py [options])

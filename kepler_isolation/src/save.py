@@ -64,7 +64,6 @@ def to_dict(gs) -> dict:
         "game_phase": gs.game_phase,
         "sound_level": gs.sound_level,
         "last_action_sound": gs.last_action_sound,
-        "board_countdown": gs.board_countdown,
         "flags": dict(gs.flags),
         "visited_rooms": sorted(gs.visited_rooms),
         "player": {
@@ -79,10 +78,11 @@ def to_dict(gs) -> dict:
             "last_room_id": p.last_room_id,
             "stayed_turns_in_room": p.stayed_turns_in_room,
             "has_terminal": p.has_terminal,
-            "has_power_coupler": p.has_power_coupler,
-            "has_signal_relay": p.has_signal_relay,
-            "has_antenna_key": p.has_antenna_key,
-            "transmitter_repaired": p.transmitter_repaired,
+            "has_coil": p.has_coil,
+            "has_crystal": p.has_crystal,
+            "has_regulator": p.has_regulator,
+            "has_coupler": p.has_coupler,
+            "radio_built": p.radio_built,
             "inventory": [_item_to_dict(i) for i in p.inventory],
             "worn": [_item_to_dict(i) for i in p.worn_items],
         },
@@ -107,7 +107,6 @@ def load_into(gs, data: dict):
     gs.game_phase = data["game_phase"]
     gs.sound_level = data["sound_level"]
     gs.last_action_sound = data["last_action_sound"]
-    gs.board_countdown = data["board_countdown"]
     gs.flags = dict(data["flags"])
     gs.visited_rooms = set(data["visited_rooms"])
     gs.death_state = None
@@ -132,10 +131,11 @@ def load_into(gs, data: dict):
     p.last_room_id = pd["last_room_id"]
     p.stayed_turns_in_room = pd["stayed_turns_in_room"]
     p.has_terminal = pd["has_terminal"]
-    p.has_power_coupler = pd["has_power_coupler"]
-    p.has_signal_relay = pd["has_signal_relay"]
-    p.has_antenna_key = pd["has_antenna_key"]
-    p.transmitter_repaired = pd["transmitter_repaired"]
+    p.has_coil = pd.get("has_coil", False)
+    p.has_crystal = pd.get("has_crystal", False)
+    p.has_regulator = pd.get("has_regulator", False)
+    p.has_coupler = pd.get("has_coupler", False)
+    p.radio_built = pd.get("radio_built", False)
     p.inventory = [_item_from_dict(i) for i in pd["inventory"]]
     p.worn_items = [_item_from_dict(i) for i in pd["worn"]]
     # Re-link the hiding spot to the real dict in the current room.

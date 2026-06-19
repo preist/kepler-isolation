@@ -52,8 +52,6 @@ def tracker_markup(m: dict) -> str:
         return f"{head}\n[dim]— no device —[/]"
     if k == "none":
         return f"{head}\n[green]no contacts[/]"
-    if k == "outside":
-        return f"{head}\n[yellow]MOTION: outside[/]\n[dim]distance uncertain[/]"
     if k == "interference":
         return f"{head}\n[yellow]signal scrambled[/]"
     if k == "lost":
@@ -63,11 +61,21 @@ def tracker_markup(m: dict) -> str:
     if k == "here":
         return "[b red]◢ MOTION TRACKER ◣[/]\n[bold red]CONTACT — THIS ROOM[/]"
     # bearing
-    d, dist = m["direction"], m["distance"]
+    d = m["direction"] or "?"
+    dist = m["distance"]
+    meters = m.get("meters", dist * 15)
+    confidence = m.get("confidence", 70)
+    motion_desc = m.get("motion_desc", "slow")
     color = "red" if dist <= 2 else "yellow"
     arrow = ARROWS.get(d, "•")
-    plural = "" if dist == 1 else "s"
-    return f"[{color}]◢ MOTION TRACKER ◣[/]\n[{color}]{arrow}  {d.upper()}[/]\nDIST: {dist} move{plural}"
+    compass = {"north": "N", "south": "S", "east": "E", "west": "W",
+               "up": "UP", "down": "DN", "in": "IN", "out": "OUT"}.get(d, d.upper())
+    return (
+        f"[{color}]◢ MOTION TRACKER ◣[/]\n"
+        f"[{color}]{arrow}  {compass}[/]\n"
+        f"~{meters}m  {motion_desc}\n"
+        f"[dim]confidence {confidence}%[/]"
+    )
 
 
 def status_markup(engine: GameEngine) -> str:
@@ -85,7 +93,7 @@ def status_markup(engine: GameEngine) -> str:
     if mt is not None:
         if mt in ("SEEN", "HERE"):
             c = "bold red"
-        elif mt in ("interference", "lost", "outside", "none"):
+        elif mt in ("interference", "lost", "none"):
             c = "dim"
         elif mt.split()[-1].isdigit() and int(mt.split()[-1]) <= 2:
             c = "red"

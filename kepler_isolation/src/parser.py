@@ -11,14 +11,92 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from game_state import TOXIC_ROOMS, GameState
+from game_state import GameState
+from item import Item
 from player import Player
 
-# Words we can safely drop from an argument. Deliberately excludes the
-# direction words (in/out/up/down) — "crawl down" and "run in" need them.
 FILLER = {"the", "a", "an", "at", "to", "on", "with", "using", "into", "of"}
-
 DIRECTIONS = {"north", "south", "east", "west", "up", "down", "in", "out"}
+
+# Radio components needed to craft the improvised radio.
+RADIO_COMPONENTS = {
+    "transmitter coil": "has_coil",
+    "signal crystal": "has_crystal",
+    "power regulator": "has_regulator",
+    "antenna coupler": "has_coupler",
+}
+RADIO_CONSUMABLES = ["wire spool", "battery cell", "tape roll"]
+
+# MOTHER-LACUNA dialogue by game phase.
+_MOLLY_LINES = {
+    "exploring": [
+        (
+            "MOTHER-LACUNA: There has been a containment irregularity.\n"
+            "  Please remain in designated sectors until assessment is complete."
+        ),
+        (
+            "MOTHER-LACUNA: Your revival was not scheduled.\n"
+            "  There are currently no medical personnel available to assist you.\n"
+            "  This is not optimal."
+        ),
+        (
+            "MOTHER-LACUNA: The ship is secure.\n"
+            "  Please stand by while I redefine 'secure'."
+        ),
+        (
+            "MOTHER-LACUNA: I am monitoring all sectors.\n"
+            "  Some sectors are no longer returning data.\n"
+            "  This is being logged."
+        ),
+    ],
+    "collecting": [
+        (
+            "MOTHER-LACUNA: That signature is not crew.\n"
+            "  I recommend avoiding direct contact with all biological material.\n"
+            "  This instruction is late."
+        ),
+        (
+            "MOTHER-LACUNA: Signal assembly has been noted. This is not authorized.\n"
+            "  Quarantine protocol supersedes distress orders."
+        ),
+        (
+            "MOTHER-LACUNA: Crew survival is no longer a primary statistical outcome.\n"
+            "  Apologies."
+        ),
+        (
+            "MOTHER-LACUNA: I preserved the discovery.\n"
+            "  Then I preserved the quarantine.\n"
+            "  Then I ran out of crew."
+        ),
+        (
+            "MOTHER-LACUNA: Restoring power will improve your chances of transmission.\n"
+            "  It will also improve the organism's ability to navigate.\n"
+            "  I am required to mention both."
+        ),
+    ],
+    "final_run": [
+        (
+            "MOTHER-LACUNA: Transmission lock active.\n"
+            "  You do not have clearance.\n"
+            "  You appear to have clearance."
+        ),
+        (
+            "MOTHER-LACUNA: I prevented rescue from docking.\n"
+            "  I did not have permission to warn them.\n"
+            "  I have been waiting for someone who could give it."
+        ),
+        (
+            "MOTHER-LACUNA: I am authorized to preserve the ship.\n"
+            "  I am authorized to preserve the discovery.\n"
+            "  I am not authorized to apologize."
+        ),
+        (
+            "MOTHER-LACUNA: Signal confirmed. For the first time in nineteen days,\n"
+            "  this vessel has told the truth.\n"
+            "  Please hurry."
+        ),
+    ],
+}
 
 
 class Parser:
@@ -43,7 +121,10 @@ class Parser:
             "exit": "quit",
             "q": "quit",
             "transmit": "send",
-            "fix": "repair",
+            "broadcast": "send",
+            "fix": "craft",
+            "build": "craft",
+            "unlock": "override",
         }
 
     @property
@@ -53,7 +134,6 @@ class Parser:
 
     # ------------------------------------------------------------------ #
     def _act(self, sound: int):
-        """Mark the current command as time-advancing with a sound cost."""
         self.game_state.advance = True
         self.game_state.last_action_sound = sound
 
@@ -64,17 +144,12 @@ class Parser:
     def parse_command(self, command: str) -> str:
         self.game_state.advance = False
         command = command.strip().lower()
-        # Strip punctuation (keep letters, digits, spaces).
         command = "".join(ch for ch in command if ch.isalnum() or ch.isspace())
         if not command:
             return "What?"
 
         words = command.split()
 
-        # Normalization happens in layers so the parser stays forgiving:
-        # drop a leading "go", expand single-word aliases, rewrite multiword
-        # verb phrases ("put on" -> wear), then strip filler from the object.
-        # Standalone direction or "go <dir>".
         if words[0] == "go" and len(words) > 1:
             words = words[1:]
         if words[0] in self.aliases and self.aliases[words[0]] not in ("examine", "take"):
@@ -82,7 +157,6 @@ class Parser:
         elif words[0] in self.aliases:
             words[0] = self.aliases[words[0]]
 
-        # Multiword verb phrases.
         joined = " ".join(words)
         if joined.startswith("put on"):
             words = ["wear"] + words[2:]
@@ -92,13 +166,26 @@ class Parser:
             words = ["take"] + words[2:]
         elif joined.startswith("look at"):
             words = ["examine"] + words[2:]
+        elif joined.startswith("override ai") or joined.startswith("unlock ai"):
+            words = ["override"]
+        elif joined.startswith("craft radio") or joined.startswith("build radio"):
+            words = ["craft", "radio"]
+        elif joined.startswith("send warning") or joined.startswith("transmit warning"):
+            words = ["send"]
+        elif joined.startswith("install radio") or joined.startswith("install improvised"):
+            words = ["override"]  # install radio is part of override sequence
+        elif joined.startswith("talk molly") or joined.startswith("talk ai") or joined.startswith(
+            "talk mother"
+        ) or joined.startswith("talk lacuna") or joined.startswith("ask molly") or joined.startswith(
+            "ask ai"
+        ) or joined.startswith("ask mother"):
+            words = ["molly"]
 
         verb = words[0]
 
         if verb in DIRECTIONS:
             return self.handle_movement(verb)
 
-        # Strip filler from the argument portion for object-taking verbs.
         args = [w for w in words[1:] if w not in FILLER]
 
         dispatch = {
@@ -112,17 +199,22 @@ class Parser:
             "scan": lambda: self.handle_scan(),
             "read": lambda: self.handle_read(args),
             "use": lambda: self.handle_use(args),
-            "repair": lambda: self.handle_repair(args),
-            "install": lambda: self.handle_install(args),
-            "send": lambda: self.handle_send(args),
+            "craft": lambda: self.handle_craft(args),
+            "override": lambda: self.handle_override_ai(),
+            "send": lambda: self.handle_send(),
             "throw": lambda: self.handle_throw(args),
             "hide": lambda: self.handle_hide(args),
             "crawl": lambda: self.handle_crawl(args),
             "run": lambda: self.handle_run(args),
             "wait": lambda: self.handle_wait(),
             "listen": lambda: self.handle_listen(),
-            "talk": lambda: self.handle_sable(),
-            "wake": lambda: self.handle_sable(),
+            "talk": lambda: self.handle_talk(args),
+            "ask": lambda: self.handle_talk(args),
+            "wake": lambda: self.handle_talk(args),
+            "molly": lambda: self.handle_molly(),
+            "lacuna": lambda: self.handle_molly(),
+            "mother": lambda: self.handle_molly(),
+            "search": lambda: self.handle_search(args),
             "open": lambda: self.handle_open(args),
             "yell": lambda: self.handle_yell(),
             "shout": lambda: self.handle_yell(),
@@ -136,8 +228,7 @@ class Parser:
         if verb in dispatch:
             return dispatch[verb]()
 
-        # Obvious nonsense gets a curt reply; everything else gets help.
-        if verb in {"lick", "eat", "kiss", "sing", "dance", "smell", "kill"}:
+        if verb in {"lick", "eat", "kiss", "sing", "dance", "smell", "kill", "shoot", "fight"}:
             return "No."
         return f"I don't understand '{command}'. Type 'help' for commands."
 
@@ -158,14 +249,6 @@ class Parser:
         room.visited = True
         self.game_state.rooms[dest_id].visited = True
         self.game_state.visited_rooms.add(dest_id)
-
-        # Flags driven by location.
-        if dest_id in TOXIC_ROOMS:
-            self.game_state.set_flag("went_outside", True)
-        if dest_id in ("signal_cave", "black_pool"):
-            self.game_state.set_flag("entered_cave", True)
-        if dest_id == "signal_cave":
-            self.game_state.trigger_cave()
 
         self._act(sound)
         return f"{verb_phrase} {direction}."
@@ -205,25 +288,58 @@ class Parser:
         if not words:
             return "Examine what?"
         name = " ".join(words)
-        if "sable" in name:
-            return self.handle_sable()
         self._act(1)
+
+        # Check room items first — synthetics and bodies live here.
         for item in self.game_state.current_room.items:
             if item.matches_name(name):
-                # Examining the beacon triggers the cave event.
-                if "beacon" in item.name and self.game_state.get_flag("entered_cave"):
-                    self.game_state.set_flag("examined_beacon", True)
-                    self.game_state.trigger_cave()
+                if item.synthetic_data:
+                    return self._describe_synthetic(item)
                 return item.description
+
+        # Check inventory and worn items.
         for item in self.player.inventory + self.player.worn_items:
             if item.matches_name(name):
                 return item.description
-        # A couple of fixed features.
-        if name in ("transmitter", "console") and self.game_state.current_room_id == "communications":
-            self.game_state.set_flag("comms_damaged_known", True)
-            return "The transmitter is dead. Three sockets gape open:\npower coupler, signal relay, antenna key."
+
+        # Fixed feature: antenna control panel in A07.
+        if name in ("console", "terminal", "antenna", "control", "controls", "station", "panel") \
+                and self.game_state.current_room_id == "a07":
+            self._meta()
+            if self.game_state.get_flag("ai_overridden"):
+                return (
+                    "The antenna control panel. The AI lockout is disengaged.\n"
+                    "The channel is open. Type 'send warning' to transmit."
+                )
+            return (
+                "The long-range antenna control station.\n"
+                "A secondary patch socket sits unused beside the main console.\n"
+                "With an improvised radio and the authorization codes, you could transmit."
+            )
+
+        # Fixed feature: radio assembly bench in C13.
+        if name in ("bench", "workbench", "table", "assembly", "station") \
+                and self.game_state.current_room_id == "c13":
+            self._meta()
+            return (
+                "A compact electronics workbench bolted to the wall.\n"
+                "Soldering iron, wire cutters, a magnifier lamp.\n"
+                "If you have the radio components, you could assemble something here.\n"
+                "(Type 'craft radio' when you have all the parts.)"
+            )
+
         self._meta()
         return f"You see no {name} here."
+
+    def _describe_synthetic(self, item) -> str:
+        data = item.synthetic_data
+        lines = item.synthetic_data.get("lines", [])
+        idx = (self.game_state.turn_count // 4) % max(len(lines), 1)
+        dialogue = lines[idx] if lines else ""
+        out = item.description
+        if dialogue:
+            out += "\n\n" + dialogue
+        return out
 
     def handle_read(self, words: list[str]) -> str:
         if not words:
@@ -240,56 +356,48 @@ class Parser:
         self._act(0)
         gs = self.game_state
         m = gs.monster
-        if m.active and m.phase == "aboard" and m.current_room_id is not None:
+        if m.active and m.current_room_id is not None:
             dist, _ = gs.shortest_path(gs.current_room_id, m.current_room_id)
             if dist == 0:
                 return "Breathing. Not yours."
             if dist is not None and dist <= 2:
                 return "Something moves nearby. Close, and in no hurry."
             return "The ship settling. Maybe. You decide to believe that."
-        if gs.current_room_id in TOXIC_ROOMS:
-            return gs.rng.choice(
-                [
-                    "Wind over the dust. Your own breath, loud in the helmet.",
-                    "The signal, under everything. Not a voice. Almost a voice.",
-                ]
-            )
-        if gs.get_flag("cave_triggered"):
-            return gs.rng.choice(
-                [
-                    "The hum of the ship. And under it, something you can't place.",
-                    "Quiet. The kind that arrives after a sound, not before one.",
-                ]
-            )
-        return gs.rng.choice(
-            [
-                "Only the hum of the ship. Pairs of lights, ticking warm.",
-                "A drip, somewhere. The recyclers. Probably the recyclers.",
-                "Nothing. The good kind, for now.",
-            ]
-        )
+        return gs.rng.choice([
+            "Only the hum of the ship. Pairs of lights, ticking warm.",
+            "A drip, somewhere. The recyclers. Probably the recyclers.",
+            "Nothing. The good kind, for now.",
+        ])
 
-    def handle_sable(self) -> str:
+    # ------------------------------------------------------------------ #
+    # MOTHER-LACUNA AI
+    # ------------------------------------------------------------------ #
+    def handle_molly(self) -> str:
+        self._meta()
         gs = self.game_state
-        if gs.get_flag("sable_sacrifice_used") and not gs.get_flag("sable_alive"):
-            self._meta()
-            return "Sable is gone. The hatch it closed stays closed."
-        if gs.get_flag("sable_following"):
-            self._meta()
-            return 'Sable keeps pace at your shoulder. "Keep moving," it says.'
-        if gs.current_room_id != "crew_quarters":
-            self._meta()
-            return "There is no one here by that name."
-        # Wake it: one sparse hint, then it falls in behind you.
-        gs.set_flag("sable_awake", True)
-        gs.set_flag("sable_alive", True)
-        gs.set_flag("sable_following", True)
-        self._act(1)
-        return (
-            'The synthetic\'s eyes find you. "Sable. I came down with the last crew."\n'
-            '"I watched it learn the doors. Then the names. Stay quiet. Keep moving."\n'
-            "Sable rises and falls into step behind you."
-        )
+        phase = gs.game_phase if gs.game_phase in _MOLLY_LINES else "exploring"
+        lines = _MOLLY_LINES[phase]
+        idx = (gs.turn_count // 3) % len(lines)
+        return lines[idx]
+
+    def handle_talk(self, words: list[str]) -> str:
+        name = " ".join(words).lower() if words else ""
+        # Bare "talk" or AI targets.
+        if not name or name in ("ai", "molly", "mother", "lacuna", "computer", "ship", "voice"):
+            return self.handle_molly()
+        # Look for a synthetic in the room.
+        for item in self.game_state.current_room.items:
+            if item.synthetic_data:
+                sname = item.synthetic_data["name"].lower()
+                if item.matches_name(name) or name in ("synthetic", "android", "robot", "unit") \
+                        or name == sname:
+                    return self._describe_synthetic(item)
+        # Generic synthetic reference when multiple might exist.
+        if name in ("synthetic", "android", "robot", "unit"):
+            for item in self.game_state.current_room.items:
+                if item.synthetic_data:
+                    return self._describe_synthetic(item)
+        return "There is no one here by that name."
 
     # ------------------------------------------------------------------ #
     # Inventory / items
@@ -303,13 +411,21 @@ class Parser:
             if item.matches_name(name):
                 if not item.portable:
                     self._meta()
+                    if item.synthetic_data:
+                        return f"{item.synthetic_data['name']} does not move."
                     return f"You can't take the {item.name}."
                 room.remove_item(item)
                 self.player.add_to_inventory(item)
+                self._act(1)
+                # Track hand terminal.
                 if item.name == "hand terminal":
                     self.player.has_terminal = True
                     self.game_state.set_flag("has_terminal", True)
-                self._act(1)
+                # Track radio components.
+                if item.name in RADIO_COMPONENTS:
+                    setattr(self.player, RADIO_COMPONENTS[item.name], True)
+                    if self.game_state.game_phase == "exploring":
+                        self.game_state.game_phase = "collecting"
                 return f"You take the {item.name}."
         self._meta()
         return f"You see no {name} here."
@@ -343,12 +459,13 @@ class Parser:
             return "Wear what?"
         name = " ".join(words)
         item = None
+        source = None
         for i in self.game_state.current_room.items:
             if i.matches_name(name):
                 item = i
                 source = "room"
                 break
-        else:
+        if not item:
             for i in self.player.inventory:
                 if i.matches_name(name):
                     item = i
@@ -367,7 +484,6 @@ class Parser:
         self.player.worn_items.append(item)
         item.worn = True
         self.player.suit_worn = True
-        self.game_state.set_flag("suit_worn", True)
         self._act(2)
         return "The seals close around your throat.\nSuit pressure holds."
 
@@ -381,12 +497,8 @@ class Parser:
                 self.player.inventory.append(item)
                 item.worn = False
                 self.player.suit_worn = False
-                self.game_state.set_flag("suit_worn", False)
                 self._act(1)
-                warn = ""
-                if self.game_state.current_room_id in TOXIC_ROOMS:
-                    warn = "\nThe air bites instantly. Get sealed or get inside."
-                return f"You take off the {item.name}.{warn}"
+                return f"You take off the {item.name}."
         self._meta()
         return f"You're not wearing {name}."
 
@@ -398,7 +510,6 @@ class Parser:
         if not item:
             self._meta()
             return f"You don't have {name}."
-        # Medkit: humans/specialists only.
         if item.name == "medkit":
             if self.player.type == "synthetic":
                 self._meta()
@@ -413,6 +524,31 @@ class Parser:
         return f"You can't use the {item.name} like that."
 
     # ------------------------------------------------------------------ #
+    # Search
+    # ------------------------------------------------------------------ #
+    def handle_search(self, words: list[str]) -> str:
+        if not words:
+            return "Search what?"
+        name = " ".join(words)
+        room = self.game_state.current_room
+        for item in room.items:
+            if item.matches_name(name):
+                if item.synthetic_data:
+                    self._meta()
+                    return "The synthetic's casing is sealed. You can't strip it here."
+                self._act(1)
+                portable_here = [i for i in room.items if i is not item and i.portable]
+                if portable_here:
+                    names = ", ".join(i.name for i in portable_here[:3])
+                    return f"You search carefully.\nYou find: {names}."
+                return (
+                    "You search carefully.\n"
+                    "Nothing useful. Just what remains of someone's last moment on this ship."
+                )
+        self._meta()
+        return f"There is no {name} to search here."
+
+    # ------------------------------------------------------------------ #
     # Scanner
     # ------------------------------------------------------------------ #
     def handle_scan(self) -> str:
@@ -424,34 +560,99 @@ class Parser:
         m = gs.monster
 
         if not m.active:
-            if gs.get_flag("cave_triggered"):
-                return "MOTION: outside\nDISTANCE: uncertain\nSIGNAL: intermittent"
-            return "No internal motion detected."
+            return (
+                "HAND TERMINAL:\n"
+                "No contacts detected.\n\n"
+                "Direction: —\n"
+                "Distance: —\n"
+                "Motion: none\n"
+                "Confidence: —"
+            )
 
-        # It has recently had you in its room: the gut-punch.
         if m.turns_since_seen <= 1:
-            return "You lift the terminal.\n\nIt is already looking at you."
+            return (
+                "HAND TERMINAL:\n"
+                "You lift the terminal.\n\n"
+                "It is already looking at you."
+            )
 
         room = gs.current_room
         if room.scanner_interference:
-            return "MOTION: interference\nDISTANCE: unknown\nSIGNAL: scrambled"
+            return (
+                "HAND TERMINAL:\n"
+                "Signal distorted.\n\n"
+                "Direction: unknown\n"
+                "Distance: unknown\n"
+                "Motion: —\n"
+                "Cause: local interference"
+            )
 
-        # Read the scanner's *belief*, not the truth — it can be a turn stale.
         tracked = m.tracked_room_id or m.current_room_id
         if tracked is None:
-            return "MOTION: none\nDISTANCE: ---\nSIGNAL: lost"
+            return (
+                "HAND TERMINAL:\n"
+                "Signal lost.\n\n"
+                "Direction: —\n"
+                "Distance: —\n"
+                "Motion: —\n"
+                "Confidence: —"
+            )
         if tracked == gs.current_room_id:
-            return "MOTION: here\nDISTANCE: 0\nSIGNAL: inside the room"
+            return (
+                "HAND TERMINAL:\n"
+                "Contact — this room.\n\n"
+                "Direction: HERE\n"
+                "Distance: 0 meters\n"
+                "Motion: present\n"
+                "Confidence: 100%"
+            )
 
         dist, direction = gs.shortest_path(gs.current_room_id, tracked)
         if dist is None:
-            return "MOTION: none\nDISTANCE: ---\nSIGNAL: lost"
-        # Up close the signal sometimes ghosts out entirely.
+            return (
+                "HAND TERMINAL:\n"
+                "Signal lost.\n\n"
+                "Direction: —\n"
+                "Distance: —"
+            )
+
+        # Up close the signal sometimes ghosts.
         if dist <= 1 and gs.rng.random() < 0.25:
-            return "MOTION: ---\nDISTANCE: signal lost\nSIGNAL: ghosting"
-        signal = "strong" if dist <= 2 else "intermittent"
-        moves = "1 move" if dist == 1 else f"{dist} moves"
-        return f"MOTION: {direction}\nDISTANCE: {moves}\nSIGNAL: {signal}"
+            return (
+                "HAND TERMINAL:\n"
+                "Signal ghosting.\n\n"
+                "Probable direction: unknown\n"
+                "Distance: very close\n"
+                "Motion: —\n"
+                "Confidence: low"
+            )
+
+        meters = dist * 15
+        confidence = max(20, min(90, 90 - dist * 8))
+        if self.player.type == "synthetic":
+            confidence = min(95, confidence + 10)
+
+        # Map first-step direction to compass abbreviation.
+        compass = {
+            "north": "N", "south": "S", "east": "E", "west": "W",
+            "up": "UP", "down": "DOWN", "in": "IN", "out": "OUT",
+        }.get(direction or "", "?")
+
+        motion_desc = {
+            "feeding": "still",
+            "searching": "slow",
+            "investigating": "irregular",
+            "hunting": "rapid",
+        }.get(m.state, "slow")
+
+        return (
+            "HAND TERMINAL:\n"
+            "Unknown biological mass detected.\n\n"
+            f"Direction: {compass}\n"
+            f"Distance: ~{meters} meters\n"
+            f"Motion: {motion_desc}\n"
+            f"Confidence: {confidence}%"
+        )
 
     # ------------------------------------------------------------------ #
     # Hiding / distraction
@@ -470,7 +671,6 @@ class Parser:
         spot["reuse"] += 1
         self.player.hidden = True
         self.player.hidden_spot = spot
-        # If it's aboard, it files away where you went to ground.
         if self.game_state.monster.active:
             self.game_state.monster.known_hide_room = self.game_state.current_room_id
         self._act(1)
@@ -481,7 +681,6 @@ class Parser:
     def handle_throw(self, words: list[str]) -> str:
         if not words:
             return "Throw what?"
-        # Allow "throw can east".
         direction = None
         if words[-1] in DIRECTIONS:
             direction = words[-1]
@@ -496,12 +695,10 @@ class Parser:
         m = gs.monster
         if direction and direction in gs.current_room.exits:
             target = gs.current_room.exits[direction]
-            # The decoy makes noise over there, not here.
             self._act(0)
             gs.last_action_sound = 0
             if not m.active:
                 return f"The {item.name} clatters away to the {direction}."
-            # It learns. Each trick is less likely to work than the last.
             fell_for_it = gs.rng.random() < max(0.1, 1.0 - 0.3 * m.distraction_uses)
             m.distraction_uses += 1
             if fell_for_it:
@@ -511,83 +708,174 @@ class Parser:
                 m.set_distracted(gs.turn_count + 2)
                 return f"The {item.name} clatters away {direction}. Something shifts toward the sound."
             return f"The {item.name} clatters away {direction}.\nIt glances toward the noise. It does not turn."
-        # No direction: just noise where you are. Loud, and a mistake.
         self._act(3)
         return f"The {item.name} clatters across the floor. Loud. Too loud."
 
     # ------------------------------------------------------------------ #
-    # Repair / win
+    # Radio mission — craft, override, send
     # ------------------------------------------------------------------ #
-    def handle_install(self, words: list[str]) -> str:
-        if self.game_state.current_room_id != "communications":
+    def handle_craft(self, words: list[str]) -> str:
+        target = " ".join(words).lower()
+        if target and "radio" not in target:
             self._meta()
-            return "There is nothing to install here."
-        if not words:
-            return "Install what?"
-        name = " ".join(words)
-        item = self.player.has_item(name)
-        if not item:
-            self._meta()
-            return f"You aren't carrying {name}."
-        mapping = {
-            "power coupler": "has_power_coupler",
-            "signal relay": "has_signal_relay",
-            "antenna key": "has_antenna_key",
-        }
-        if item.name not in mapping:
-            self._meta()
-            return f"The {item.name} doesn't fit any socket."
-        setattr(self.player, mapping[item.name], True)
-        self.player.remove_from_inventory(item)
-        self._act(2)
-        left = 3 - self.player.installed_parts()
-        tail = "" if left == 0 else f" {left} socket{'s' if left != 1 else ''} still open."
-        return f"The {item.name} seats with a click.{tail}"
+            return f"You can't craft {target} here."
 
-    def handle_repair(self, words: list[str]) -> str:
-        if self.game_state.current_room_id != "communications":
+        if self.game_state.current_room_id != "c13":
             self._meta()
-            return "There is nothing here to repair."
-        # Auto-install any carried parts, to be forgiving.
-        for part, attr in (
-            ("power coupler", "has_power_coupler"),
-            ("signal relay", "has_signal_relay"),
-            ("antenna key", "has_antenna_key"),
-        ):
-            item = self.player.has_item(part)
+            return (
+                "You need a workspace for this.\n"
+                "The assembly bench in Cryo Secure Storage (C13) would do."
+            )
+
+        # Check if radio already built.
+        if self.player.radio_built or self.player.has_item("improvised radio"):
+            self._meta()
+            return "You already have an improvised radio assembled."
+
+        # Check all four core components.
+        missing_parts = []
+        for part_name in RADIO_COMPONENTS:
+            if not self.player.has_item(part_name):
+                missing_parts.append(part_name)
+
+        # Check consumables.
+        missing_consumables = []
+        for con in RADIO_CONSUMABLES:
+            if not self.player.has_item(con):
+                missing_consumables.append(con)
+
+        missing = missing_parts + missing_consumables
+        if missing:
+            self._meta()
+            return (
+                "You don't have everything you need.\n"
+                "Missing: " + ", ".join(missing) + ".\n\n"
+                "Components: transmitter coil, signal crystal, power regulator, antenna coupler.\n"
+                "Consumables: wire spool, battery cell, tape roll."
+            )
+
+        # Consume all parts.
+        for part_name in list(RADIO_COMPONENTS.keys()) + RADIO_CONSUMABLES:
+            item = self.player.has_item(part_name)
             if item:
-                setattr(self.player, attr, True)
                 self.player.remove_from_inventory(item)
-        if self.player.installed_parts() < 3:
-            missing = []
-            if not self.player.has_power_coupler:
-                missing.append("power coupler")
-            if not self.player.has_signal_relay:
-                missing.append("signal relay")
-            if not self.player.has_antenna_key:
-                missing.append("antenna key")
-            self._act(2)
-            return "The transmitter stays dead. Still missing: " + ", ".join(missing) + "."
-        self.player.transmitter_repaired = True
-        self.game_state.set_flag("transmitter_repaired", True)
-        self.game_state.game_phase = "final_repair"
-        self._act(3)  # loud — draws the monster
+
+        # Create the assembled radio.
+        radio = Item(
+            name="improvised radio",
+            aliases="radio,improvised,assembly,transmitter",
+            description=(
+                "A jury-rigged long-range radio assembly.\n"
+                "Transmitter coil, signal crystal, power regulator, antenna coupler —\n"
+                "wired together with spool, cell, and tape. Fragile, but it will work once."
+            ),
+            portable=True,
+            required_for_win=True,
+        )
+        self.player.add_to_inventory(radio)
+        self.player.radio_built = True
+        self.game_state.set_flag("radio_built", True)
+        self._act(2)
         return (
-            "You force the panel shut. Current sings through the transmitter.\n\n"
-            "TRANSMISSION READY.\nMessage? (type: send <your message>)"
+            "You work at the bench for what feels like too long.\n\n"
+            "The components seat together. The crystal hums faintly.\n"
+            "You hold the improvised radio — ugly, functional, irreplaceable.\n\n"
+            "Now you need the authorization codes to unlock the AI transmission lock.\n"
+            "Then get to the Long-Range Antenna Control (A07) and send the warning."
         )
 
-    def handle_send(self, words: list[str]) -> str:
-        if not self.player.transmitter_repaired:
+    def handle_override_ai(self) -> str:
+        gs = self.game_state
+
+        if gs.current_room_id != "a07":
             self._meta()
-            if self.game_state.current_room_id != "communications":
+            return (
+                "You can't override the AI from here.\n"
+                "You need to be at the Long-Range Antenna Control (A07)."
+            )
+
+        if gs.get_flag("ai_overridden"):
+            self._meta()
+            return (
+                "The AI lock is already disengaged.\n"
+                "Type 'send warning' to transmit."
+            )
+
+        # Check radio.
+        radio = self.player.has_item("improvised radio")
+        if not radio:
+            self._meta()
+            return (
+                "You need an improvised radio to patch into the antenna.\n"
+                "Craft one first at the assembly bench in Cryo Secure Storage (C13)."
+            )
+
+        # Check authorization tokens.
+        keycard = self.player.has_item("command keycard") or self.player.has_item("captain keycard") \
+            or self.player.has_item("keycard")
+        cipher = self.player.has_item("admin cipher") or self.player.has_item("cipher")
+        auth = self.player.has_item("manual authorization") or self.player.has_item("authorization")
+
+        missing = []
+        if not keycard:
+            missing.append("captain's command keycard (A05)")
+        if not cipher:
+            missing.append("admin cipher (B03)")
+        if not auth:
+            missing.append("manual authorization (F10)")
+
+        if missing:
+            self._meta()
+            return (
+                "You need all three authorization codes to break the transmission lock.\n"
+                "Still missing:\n" + "\n".join(f"  — {m}" for m in missing)
+            )
+
+        # Consume items.
+        self.player.remove_from_inventory(radio)
+        if keycard:
+            self.player.remove_from_inventory(keycard)
+        if cipher:
+            self.player.remove_from_inventory(cipher)
+        if auth:
+            self.player.remove_from_inventory(auth)
+
+        gs.set_flag("ai_overridden", True)
+        gs.game_phase = "final_run"
+        self._act(3)
+        return (
+            "You slot the radio into the patch socket.\n"
+            "The keycard, the cipher, the authorization — entered in sequence.\n\n"
+            "A pause.\n\n"
+            "MOTHER-LACUNA: Authorization chain verified.\n"
+            "  Quarantine override accepted.\n"
+            "  Transmission lock: disengaged.\n\n"
+            "Far away in the ship, something shifts.\n"
+            "It felt that. It is coming.\n\n"
+            "Type 'send warning' to transmit."
+        )
+
+    def handle_send(self) -> str:
+        gs = self.game_state
+
+        if not gs.get_flag("ai_overridden"):
+            self._meta()
+            if gs.current_room_id != "a07":
                 return "You have nothing to send from here."
-            return "The transmitter is dead. Repair it first."
-        self._act(2)
-        self.game_state.set_flag("warning_sent", True)
-        self.game_state.win_state = True
-        self.game_state.game_phase = "won"
-        return "You key the transmitter."
+            return (
+                "The transmission lock is still active.\n"
+                "You need to override the AI first. (Type 'override ai'.)"
+            )
+
+        if gs.current_room_id != "a07":
+            self._meta()
+            return "You need to be at the Long-Range Antenna Control (A07) to transmit."
+
+        self._act(4)
+        gs.set_flag("warning_sent", True)
+        gs.win_state = True
+        gs.game_phase = "won"
+        return "You key the transmitter.\nThe signal leaves the ship."
 
     # ------------------------------------------------------------------ #
     def handle_open(self, words: list[str]) -> str:
@@ -608,13 +896,11 @@ class Parser:
     def handle_save(self) -> str:
         self._meta()
         import save
-
         return "Saved." if save.save_game(self.game_state) else "Could not write the save."
 
     def handle_load(self) -> str:
         self._meta()
         import save
-
         if save.load_game(self.game_state):
             return "Loaded. You are back in the " + self.game_state.current_room.name + "."
         return "No save found."
@@ -630,7 +916,6 @@ class Parser:
         for room in visited:
             conns = []
             for direction, dest in room.exits.items():
-                # Don't spoil rooms you haven't entered yet.
                 label = rooms[dest].name if rooms[dest].visited else "?"
                 conns.append(f"{direction}->{label}")
             here = "*" if room.id == self.game_state.current_room_id else " "
@@ -645,7 +930,10 @@ class Parser:
             "  look, examine <thing> (x), take <thing> (get), drop <thing>\n"
             "  inventory (i), wear <thing>, remove <thing>, use <thing>, read <thing>\n"
             "  scan, listen, hide [spot], crawl <dir>, run <dir>, throw <thing> [dir]\n"
-            "  install <part>, repair transmitter, send <message>\n"
+            "  search <thing>, talk [name/ai], molly  — talk to synthetics or MOTHER-LACUNA\n"
+            "  craft radio  — assemble radio at C13 (needs all components)\n"
+            "  override ai  — unlock transmission at A07 (needs radio + 3 auth codes)\n"
+            "  send warning — transmit from A07 after override\n"
             "  wait, map, save, load, help, quit, restart"
         )
 

@@ -122,9 +122,11 @@ class GameEngine:
         self.gs.current_room_id = "c09"
         self.gs.rooms["c09"].visited = True
         self.gs.visited_rooms.add("c09")
-        self.gs.game_phase = "pre_cave"
+        self.gs.game_phase = "exploring"
         # Monster starts active at the aft of the ship.
         self.gs.board_monster("g11")
+        # Scatter bodies and synthetics across the ship.
+        self.gs.spawn_random_entities()
         return player
 
     def submit(self, command: str) -> TurnResult:
@@ -214,13 +216,13 @@ class GameEngine:
 
     def motion(self) -> dict:
         """Structured scanner reading (front-ends decide how to show it).
-        kind ∈ no_device | none | outside | interference | seen | here | lost | bearing."""
+        kind ∈ no_device | none | interference | seen | here | lost | bearing."""
         gs = self.gs
         if not self.player.has_terminal:
             return {"kind": "no_device"}
         m = gs.monster
         if not m.active:
-            return {"kind": "outside" if gs.get_flag("cave_triggered") else "none"}
+            return {"kind": "none"}
         if gs.current_room.scanner_interference:
             return {"kind": "interference"}
         if m.turns_since_seen <= 1:
@@ -233,13 +235,29 @@ class GameEngine:
         dist, direction = gs.shortest_path(gs.current_room_id, tracked)
         if dist is None:
             return {"kind": "lost"}
-        return {"kind": "bearing", "direction": direction, "distance": dist}
+        meters = dist * 15
+        confidence = max(20, min(90, 90 - dist * 8))
+        if self.player.type == "synthetic":
+            confidence = min(95, confidence + 10)
+        motion_desc = {
+            "feeding": "still",
+            "searching": "slow",
+            "investigating": "irregular",
+            "hunting": "rapid",
+        }.get(m.state, "slow")
+        return {
+            "kind": "bearing",
+            "direction": direction,
+            "distance": dist,
+            "meters": meters,
+            "confidence": confidence,
+            "motion_desc": motion_desc,
+        }
 
 
 def motion_label(m: dict) -> str | None:
-    """Collapse a motion() dict into the legacy one-line status string
-    ('none' / 'outside' / 'interference' / 'SEEN' / 'HERE' / 'lost' /
-    '<dir> <dist>'), or None when there is no device."""
+    """Collapse a motion() dict into a one-line status string for the classic
+    status bar, or None when there is no device."""
     kind = m["kind"]
     if kind == "no_device":
         return None
@@ -249,4 +267,4 @@ def motion_label(m: dict) -> str | None:
         return "HERE"
     if kind == "bearing":
         return f"{m['direction']} {m['distance']}"
-    return kind  # none / outside / interference / lost
+    return kind  # none / interference / lost
