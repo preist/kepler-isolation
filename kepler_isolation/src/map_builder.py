@@ -189,7 +189,7 @@ def create_rooms() -> dict:
         description=(
             "The command center. All chairs empty, all screens live.\n"
             "The captain's chair faces a console someone left mid-sentence.\n"
-            "A cold mug of coffee still sits in the holder."
+            "The intercom is open on a channel no one is transmitting from."
         ),
         items=[],
         exits={"north": "a03", "south": "b01", "east": "a07", "west": "a08"},
@@ -238,14 +238,14 @@ def create_rooms() -> dict:
         name="Long-Range Antenna Control",
         description=(
             "The final room. A dish antenna coupling array faces the hull.\n"
-            "Three empty mounting sockets wait for an improvised radio.\n"
-            "From here, a signal could reach anyone."
+            "Three empty mounting sockets.\n"
+            "From here, a signal reaches anyone."
         ),
         items=[
             Item(
                 "transmitter coil",
                 "coil,transmitter",
-                "A long-range transmission coil. Heavy. This is one of four things you need.",
+                "A long-range transmission coil. Heavy. Built to carry a signal across nothing.",
                 portable=True,
                 required_for_win=True,
             ),
@@ -750,16 +750,16 @@ def create_rooms() -> dict:
     rooms["d09"] = Room(
         name="Spectrometry Lab",
         description=(
-            "Dense analysis equipment fills the room. One unit is still running.\n"
-            "A signal crystal sits in the spectrometer tray, forgotten or left.\n"
-            "It reads at frequencies that should not occur naturally."
+            "Dense analysis equipment, one unit still running.\n"
+            "A crystal in the spectrometer tray — put there deliberately, or never removed.\n"
+            "The readout shows a frequency the machine was not designed to find."
         ),
         items=[
             Item(
                 "signal crystal",
                 "crystal,signal",
-                "A resonance crystal from the spectrometer tray. Reads at unusual frequencies.\n"
-                "One of four components for the improvised radio.",
+                "A resonance crystal from the spectrometer tray.\n"
+                "It reads at frequencies that should not occur naturally.",
                 portable=True,
                 required_for_win=True,
             ),
@@ -949,7 +949,7 @@ def create_rooms() -> dict:
         description=(
             "Sub-zero food storage. The cold here is a physical presence.\n"
             "One freezer unit is open — the body inside is not frozen.\n"
-            "The scanner behaves strangely here. The cold confuses it."
+            "Something used this room to wait. Or something still does."
         ),
         items=[],
         exits={"north": "e07"},
@@ -1060,7 +1060,7 @@ def create_rooms() -> dict:
         description=(
             "Manufacturing equipment, idle. A CNC unit still holds a half-finished part.\n"
             "The floor is marked with work zones in faded paint.\n"
-            "A synthetic was working here recently — the panel is still warm."
+            "A maintenance panel still warm from recent use."
         ),
         items=[],
         exits={"east": "f01", "south": "f03"},
@@ -1145,15 +1145,15 @@ def create_rooms() -> dict:
         name="Power Distribution",
         description=(
             "A room of breaker panels, cable runs, and junction boxes.\n"
-            "The main power routing board needs manual reset before the generator can start.\n"
-            "A component in one of the junction boxes catches your eye."
+            "Main power routing — offline. The reset board has been bypassed, then re-bypassed.\n"
+            "One junction box is open. Someone left it that way on purpose."
         ),
         items=[
             Item(
                 "power regulator",
                 "regulator,component",
-                "A power regulation unit, company-grey.\n"
-                "One of four components for the improvised radio.",
+                "A power regulation unit, company-grey. Precision-built.\n"
+                "Surplus to the generator's requirements.",
                 portable=True,
                 required_for_win=True,
             ),
@@ -1165,9 +1165,9 @@ def create_rooms() -> dict:
     rooms["f09"] = Room(
         name="Generator Room",
         description=(
-            "The emergency generator, silent and dark.\n"
-            "Starting it requires coolant pressure from F12 and routing from F08 first.\n"
-            "The startup sequence is loud. Very loud."
+            "The emergency generator, offline and cold.\n"
+            "A startup sequence card is taped to the panel. Half torn away.\n"
+            "When this room runs, it is not a place to be."
         ),
         items=[],
         exits={"east": "f08"},
@@ -1178,8 +1178,8 @@ def create_rooms() -> dict:
         name="Reactor Monitoring",
         description=(
             "Reactor status panels, all nominal — the reactor runs without crew.\n"
-            "A manual authorization terminal is bolted to the far wall.\n"
-            "One component of the AI containment override lives here."
+            "A manual authorization terminal, bolted to the far wall.\n"
+            "Someone tried to remove it. The bolts held better than they did."
         ),
         items=[
             Item(
@@ -1209,8 +1209,8 @@ def create_rooms() -> dict:
         name="Coolant Control",
         description=(
             "Coolant pressure systems, pipes sweating in the heat from next door.\n"
-            "Pressure is low — the generator cannot start without manual stabilization.\n"
-            "The controls are straightforward once you have insulated gloves."
+            "Pressure is low — a lockout panel blinks amber.\n"
+            "The manual bypass requires two hands and something between you and the live bus."
         ),
         items=[],
         exits={"west": "f08", "south": "f11"},
@@ -1223,8 +1223,8 @@ def create_rooms() -> dict:
         name="Cargo Spine",
         description=(
             "A central loading corridor connecting cargo bays and docking.\n"
-            "Cargo chains hang from overhead rails, still. One sways though the air is still.\n"
-            "The alien territory begins here. The scanner confirms it."
+            "Cargo chains hang from the overhead rails.\n"
+            "One sways. The air is still."
         ),
         items=[],
         exits={"north": "f11", "south": "g05", "west": "g02", "east": "g03"},
@@ -1302,8 +1302,8 @@ def create_rooms() -> dict:
         name="Pressure Suit Locker",
         description=(
             "Suit storage for external operations. Two suits remain, both damaged.\n"
-            "A body is slumped against the far wall in a partial suit, one glove on.\n"
-            "A battery cell has rolled under the bench."
+            "A body against the far wall in a partial suit, one glove on.\n"
+            "Whatever the bare hand was reaching for is not in this room."
         ),
         items=[
             Item(
@@ -1358,14 +1358,14 @@ def create_rooms() -> dict:
         description=(
             "The aft-most room. A beacon relay array, dead.\n"
             "A field note from the surface survey team is pinned to the wall.\n"
-            "One of four radio components is secured in the relay cabinet."
+            "The relay cabinet is open. Something was removed. Something was also left."
         ),
         items=[
             Item(
                 "antenna coupler",
                 "coupler,antenna",
                 "An antenna coupling unit from the beacon array.\n"
-                "One of four components for the improvised radio.",
+                "It was designed to transmit. It still can.",
                 portable=True,
                 required_for_win=True,
             ),
@@ -1440,7 +1440,7 @@ def create_rooms() -> dict:
     mroom("m10", "Cryo Maintenance Hub",
         "A wider space connecting all four cryo airlock shafts.\n"
         "The air is cold enough that your breath shows.\n"
-        "An access panel above leads to the cryo power room.",
+        "An access panel in the ceiling. Unlatched.",
         {"north": "m06", "west": "m07", "south": "m08", "out": "m09",
          "up": "c12", "east": "m11"})
 
@@ -1525,7 +1525,7 @@ def create_rooms() -> dict:
 
     mroom("m26", "Power Shaft",
         "Beneath the power distribution room.\n"
-        "The hum of electrical systems is constant. Your scanner has trouble here.",
+        "The electrical noise here is a wall. Nothing reads cleanly.",
         {"north": "m25", "up": "f08", "east": "m27"})
     rooms["m26"].scanner_interference = True
 
@@ -1536,7 +1536,7 @@ def create_rooms() -> dict:
 
     mroom("m28", "Reactor Access Shaft",
         "The maintenance shaft beneath the reactor chamber.\n"
-        "Heat radiates through the floor. You don't stay longer than you have to.",
+        "Heat radiates through the floor. Nobody stays longer than they have to.",
         {"north": "m27", "up": "f11", "south": "m29"})
     rooms["m28"].ambient_sound = 2  # reactor vibration
 
@@ -1739,10 +1739,6 @@ def create_rooms() -> dict:
             "Laundry west. The machine on a cold cycle.\n"
             "The machine has stopped. The drum holds something that shouldn't be in it."
         ),
-        "e04": (
-            "Lounge west. The card game, mid-play.\n"
-            "The cards have been disturbed. Not swept — rearranged."
-        ),
         "e05": (
             "Main concourse. The six corridors. The flickering lights.\n"
             "GO BACK on the floor. Someone has added: TOO LATE."
@@ -1788,8 +1784,8 @@ def create_rooms() -> dict:
             "Something has crossed it, back and forth, many times."
         ),
         "f02": (
-            "Fabrication bay. The idle CNC unit. The warm synthetic panel.\n"
-            "The synthetic's panel is cold now. The synthetic was here recently. It isn't."
+            "Fabrication bay. The idle CNC unit.\n"
+            "The maintenance panel is cold now. Something was working here. It isn't."
         ),
         "f03": (
             "Tool cage. The insulated gloves. The cutting torch.\n"
