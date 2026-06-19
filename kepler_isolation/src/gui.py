@@ -87,14 +87,19 @@ _GREEN = "#4a7c50"
 # ---------------------------------------------------------------------------
 # Asset resolution
 # ---------------------------------------------------------------------------
-_ASSETS = Path(__file__).parent.parent / "assets" / "zones"
+_ROOMS_DIR = Path(__file__).parent.parent / "assets" / "rooms"
 
 
-def _zone_pixmap(room_id: str) -> "QPixmap | None":
-    """Return a QPixmap for the zone, or None if no image is on disk."""
-    zone = room_id[0] if room_id else "c"
-    for ext in ("jpg", "jpeg", "png", "webp"):
-        p = _ASSETS / f"{zone}.{ext}"
+def _room_pixmap(room_id: str) -> "QPixmap | None":
+    """Return a QPixmap for this specific room, or None if no image is on disk.
+
+    Drop images into:  kepler_isolation/assets/rooms/{room_id}.png
+    e.g. c09.png, a07.jpg, g11.webp  — any of jpg/jpeg/png/webp work.
+    """
+    if not room_id:
+        return None
+    for ext in ("png", "jpg", "jpeg", "webp"):
+        p = _ROOMS_DIR / f"{room_id}.{ext}"
         if p.exists():
             px = QPixmap(str(p))
             if not px.isNull():
@@ -497,17 +502,13 @@ class KeplerGUI(QMainWindow):
 
     def _refresh_image(self) -> None:
         room_id = self.engine.gs.current_room_id
-        px = _zone_pixmap(room_id)
+        px = _room_pixmap(room_id)
         if px is None:
-            self._img_label.clear()
-            self._img_label.setText(
-                f'<span style="color:{_DIM}; font-size:10px;">'
-                f"zone image not found<br>"
-                f'<span style="color:{_BORDER}; font-size:9px;">'
-                f"assets/zones/{room_id[0] if room_id else '?'}.jpg</span></span>"
-            )
+            # Hide the image panel entirely when no image is available.
+            self._img_frame.setVisible(False)
             return
 
+        self._img_frame.setVisible(True)
         # Scale to fill the frame while preserving aspect ratio, then centre-crop.
         fw = self._img_frame.width() or 400
         fh = self._img_frame.height() or 400
