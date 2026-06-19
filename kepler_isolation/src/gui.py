@@ -197,7 +197,7 @@ class KeplerGUI(QMainWindow):
         self.engine = GameEngine()
         self.mode = "role"  # role | play | leaderboard | over
         self._lb_qualifies = False
-        self._font = self._make_mono(13)
+        self._font = self._make_mono(14)
         self._small_font = self._make_mono(10)
         self._apply_palette()
         self._build_ui()
