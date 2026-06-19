@@ -281,10 +281,10 @@ class ClassicGame:
         return choice.startswith("r")
 
     def restart(self):
-        # Keep the same character to skip re-creation; new_game resets the world.
         prev = self.engine.player
+        role = {"crew": "1", "synthetic": "2", "contractor": "3"}.get(prev.type, "1")
         player = Player(prev.name, prev.gender, prev.type)
-        self.engine.new_game(player=player)
+        self.engine.new_game(role, player=player)
         print("\n" + RULE)
         print("The cryo cycle resets. Again.")
         print(RULE)

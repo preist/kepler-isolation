@@ -141,8 +141,7 @@ class GameEngine:
 
     # ------------------------------------------------------------------ #
     def new_game(self, role_choice="1", player=None):
-        """Start a fresh game. Pass an existing player to keep them across a
-        restart (skips re-selecting a role)."""
+        """Start a fresh game."""
         if player is None:
             name, ptype = ROLES.get(role_choice, ROLES["1"])
             gender = ROLE_GENDERS.get(ptype, "neutral")
@@ -151,19 +150,26 @@ class GameEngine:
         self.gs.rooms = create_rooms()
         self.gs.current_room_id = "c09"
         self.gs.rooms["c09"].visited = True
-        self.gs.visited_rooms.add("c09")
+        self.gs.visited_rooms = {"c09"}
         self.gs.game_phase = "exploring"
         self.gs.death_state = None
         self.gs.win_state = False
-        # Three-life queue: current character first, others follow.
-        queue = _build_char_queue(role_choice)
-        # Keep queue if restarting with same player (preserves used-life count).
-        if not self.gs.character_queue or player not in [
-            Player(c["name"], c["gender"], c["type"]) for c in self.gs.character_queue
-        ]:
-            self.gs.character_queue = queue
-            self.gs.lives_used = 0
-        # Monster starts active at the aft of the ship.
+        self.gs.turn_count = 0
+        self.gs.sound_level = "silent"
+        self.gs.last_action_sound = 0
+        self.gs.advance = False
+        self.gs.flags = {
+            "has_terminal": False,
+            "monster_boarded": False,
+            "generator_running": False,
+            "radio_built": False,
+            "ai_overridden": False,
+            "warning_sent": False,
+        }
+        # Three-life queue always rebuilt fresh on new_game.
+        self.gs.character_queue = _build_char_queue(role_choice)
+        self.gs.lives_used = 0
+        # Monster starts active at the aft of the ship (full state reset).
         self.gs.board_monster("g11")
         # Scatter bodies and synthetics across the ship.
         self.gs.spawn_random_entities()

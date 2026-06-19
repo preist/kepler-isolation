@@ -259,7 +259,8 @@ class KeplerApp(App):
 
     def _restart(self) -> None:
         p = self.engine.player
-        self.engine.new_game(player=Player(p.name, p.gender, p.type))
+        role = {"crew": "1", "synthetic": "2", "contractor": "3"}.get(p.type, "1")
+        self.engine.new_game(role, player=Player(p.name, p.gender, p.type))
         self.rlog.clear()
         self._w("[dim]The cryo cycle resets. Again.[/]")
         self.rlog.write("")

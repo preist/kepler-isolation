@@ -652,7 +652,8 @@ class GameState:
     # Monster boarding
     # ------------------------------------------------------------------ #
     def board_monster(self, spawn_id="g11"):
-        """Bring the monster aboard the ship at the given room."""
+        """Bring the monster aboard the ship at the given room (full reset)."""
+        self.monster = Monster()
         m = self.monster
         m.active = True
         m.phase = "aboard"
