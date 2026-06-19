@@ -91,19 +91,18 @@ _ROOMS_DIR = Path(__file__).parent.parent / "assets" / "rooms"
 
 
 def _room_pixmap(room_id: str) -> "QPixmap | None":
-    """Return a QPixmap for this specific room, or None if no image is on disk.
+    """Return a QPixmap for this room, or None.
 
-    Drop images into:  kepler_isolation/assets/rooms/{room_id}.png
-    e.g. c09.png, a07.jpg, g11.webp  — any of jpg/jpeg/png/webp work.
+    Drop square PNGs into:  kepler_isolation/assets/rooms/{room_id}.png
+    e.g. c09.png, a07.png, g11.png
     """
     if not room_id:
         return None
-    for ext in ("png", "jpg", "jpeg", "webp"):
-        p = _ROOMS_DIR / f"{room_id}.{ext}"
-        if p.exists():
-            px = QPixmap(str(p))
-            if not px.isNull():
-                return px
+    p = _ROOMS_DIR / f"{room_id}.png"
+    if p.exists():
+        px = QPixmap(str(p))
+        if not px.isNull():
+            return px
     return None
 
 
@@ -509,18 +508,19 @@ class KeplerGUI(QMainWindow):
             return
 
         self._img_frame.setVisible(True)
-        # Scale to fill the frame while preserving aspect ratio, then centre-crop.
-        fw = self._img_frame.width() or 400
-        fh = self._img_frame.height() or 400
+        # Cover: scale the square PNG to fill the frame (max 400×400), centre-crop
+        # any overflow so neither dimension ever shows a gap.
+        fw = min(self._img_frame.width() or 400, 400)
+        fh = min(self._img_frame.height() or 400, 400)
+        side = max(fw, fh)  # square images → one scale step covers both axes
         scaled = px.scaled(
-            QSize(fw, fh),
-            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+            QSize(side, side),
+            Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
         ox = (scaled.width() - fw) // 2
         oy = (scaled.height() - fh) // 2
-        cropped = scaled.copy(ox, oy, fw, fh)
-        self._img_label.setPixmap(cropped)
+        self._img_label.setPixmap(scaled.copy(ox, oy, fw, fh))
         self._img_label.setText("")
 
     # ------------------------------------------------------------------ #
