@@ -119,10 +119,12 @@ class GameEngine:
             player = Player(name, gender, ptype)
         self.gs.player = player
         self.gs.rooms = create_rooms()
-        self.gs.current_room_id = "cockpit"
-        self.gs.rooms["cockpit"].visited = True
-        self.gs.visited_rooms.add("cockpit")
+        self.gs.current_room_id = "c09"
+        self.gs.rooms["c09"].visited = True
+        self.gs.visited_rooms.add("c09")
         self.gs.game_phase = "pre_cave"
+        # Monster starts active at the aft of the ship.
+        self.gs.board_monster("g11")
         return player
 
     def submit(self, command: str) -> TurnResult:

@@ -25,8 +25,8 @@ DIRECTION_ORDER = ["north", "south", "east", "west", "up", "down", "in", "out"]
 
 SOUND_LABELS = {0: "silent", 1: "quiet", 2: "audible", 3: "loud", 4: "violent"}
 
-# Rooms whose atmosphere is lethal without a suit.
-TOXIC_ROOMS = {"surface", "landing_gear", "ridge", "cave_mouth", "signal_cave", "black_pool"}
+# Rooms whose atmosphere is lethal without a suit (none in the current ship layout).
+TOXIC_ROOMS: set[str] = set()
 
 # Sparse telegraph lines. We never print the monster's state as a word — we let
 # these stand in for it. Hunting reads fast and certain; searching reads soft.
@@ -56,7 +56,7 @@ class GameState:
     def __init__(self):
         self.player: Player | None = None
         self.rooms: dict = {}
-        self.current_room_id = "cockpit"
+        self.current_room_id = "c09"
         self.turn_count = 0
         # intro, pre_cave, outside, cave_triggered, returned_to_ship,
         # monster_aboard, final_repair, won, dead
@@ -176,7 +176,7 @@ class GameState:
         self.monster.phase = "following"
         self.monster.state = "following"
 
-    def board_monster(self, spawn_id="airlock"):
+    def board_monster(self, spawn_id="g11"):
         """Bring the monster aboard the ship."""
         m = self.monster
         m.active = True
@@ -268,7 +268,7 @@ class GameState:
             self.get_flag("cave_triggered")
             and not self.get_flag("monster_boarded")
             and self.board_countdown is None
-            and self.current_room_id == "airlock"
+            and self.current_room_id == "g06"
             and self.get_flag("went_outside")
         ):
             self.set_flag("returned_after_cave", True)
@@ -313,7 +313,7 @@ class GameState:
                 # It came in through the airlock, behind you. Spawning at your
                 # back (not at the objective-rich stern) makes the hunt a fair
                 # chase: you move away from it toward the parts, not into it.
-                spawn = "airlock" if self.get_flag("returned_after_cave") else self._distant_spawn()
+                spawn = "g06" if self.get_flag("returned_after_cave") else self._distant_spawn()
                 self.board_monster(spawn)
                 msgs.append(
                     "Far down the ship, something knocks. Once. Soft.\n"
@@ -327,7 +327,7 @@ class GameState:
 
     def _distant_spawn(self):
         """Pick an aboard spawn room that is far from the player."""
-        candidates = ["airlock", "ventral_service", "reactor_room", "lower_hold"]
+        candidates = ["g11", "g06", "f11", "f08"]
         best, best_dist = "airlock", -1
         for rid in candidates:
             dist, _ = self.shortest_path(self.current_room_id, rid)
@@ -391,7 +391,7 @@ class GameState:
         # send is meant to be a knife-edge, not a victory lap.
         if self.game_phase == "final_repair":
             m.state = "hunting"
-            return "communications"
+            return "a07"
         if m.last_heard_room_id and m.turns_since_heard <= 2:
             m.state = "hunting"
             return m.last_heard_room_id
@@ -466,6 +466,9 @@ class GameState:
                 return
         dest = room.exits.get(direction)
         if dest:
+            dest_room = self.rooms.get(dest)
+            if dest_room and not dest_room.monster_allowed:
+                return
             m.current_room_id = dest
 
     def _maybe_telegraph(self):
