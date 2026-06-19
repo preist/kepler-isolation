@@ -71,6 +71,7 @@ from engine import (
     ROLE_FLAVOR,
     GameEngine,
     motion_label,
+    parse_role,
 )
 from player import Player
 from version import AUTHOR, BUILD, VERSION
@@ -618,7 +619,11 @@ class KeplerGUI(QMainWindow):
         self._w(f"> {text}", color=_CYAN)
 
         if self.mode == "role":
-            self._start(text)
+            choice = parse_role(text)
+            if choice is None:
+                self._w("Unrecognised. Type 1, 2, or 3 — or a name: mara, valdorf, jonah.", color=_DIM)
+                return
+            self._start(choice)
             return
         if self.mode == "leaderboard":
             self._record_leaderboard(text)
@@ -659,7 +664,7 @@ class KeplerGUI(QMainWindow):
     # Game flow helpers
     # ------------------------------------------------------------------ #
     def _start(self, choice: str) -> None:
-        player = self.engine.new_game(choice if choice in ("1", "2", "3") else "1")
+        player = self.engine.new_game(choice)
         self._log.clear()
         self._w(f"{player.name}.  {player.type.replace('_', ' ').title()}.", bold=True)
         self._w("")

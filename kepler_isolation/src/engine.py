@@ -65,6 +65,34 @@ _POD_LABEL = {
 }
 
 
+_ROLE_ALIASES: dict[str, str] = {
+    # numeric
+    "1": "1",
+    "2": "2",
+    "3": "3",
+    # crew
+    "crew": "1",
+    "mara": "1",
+    "vale": "1",
+    "mara vale": "1",
+    # synthetic
+    "synthetic": "2",
+    "valdorf": "2",
+    "unit 7": "2",
+    "unit7": "2",
+    # contractor
+    "contractor": "3",
+    "jonah": "3",
+    "rusk": "3",
+    "jonah rusk": "3",
+}
+
+
+def parse_role(text: str) -> str | None:
+    """Return '1', '2', or '3' for recognised role inputs, else None."""
+    return _ROLE_ALIASES.get(text.strip().lower())
+
+
 def _build_char_queue(role_choice: str) -> list:
     idx = {"1": 0, "2": 1, "3": 2}.get(role_choice, 0)
     chosen = _ALL_CHARACTERS[idx]

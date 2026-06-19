@@ -31,6 +31,7 @@ from engine import (
     ROLE_FLAVOR,
     GameEngine,
     motion_label,
+    parse_role,
 )
 from player import Player
 
@@ -113,7 +114,11 @@ class ClassicGame:
         print("  1. Crew        — Mara Vale")
         print("  2. Synthetic   — Valdorf")
         print("  3. Contractor  — Jonah Rusk")
-        choice = input("> ").strip()
+        while True:
+            choice = parse_role(input("> ").strip())
+            if choice:
+                break
+            print("Unrecognised. Type 1, 2, or 3 — or a name: mara, valdorf, jonah.")
         player = self.engine.new_game(choice)
         label = player.type.replace("_", " ").title()
         print(f"\n{player.name}. {label}.")

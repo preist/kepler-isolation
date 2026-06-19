@@ -34,6 +34,7 @@ from engine import (
     ROLE_FLAVOR,
     GameEngine,
     motion_label,
+    parse_role,
 )
 from player import Player
 
@@ -211,7 +212,11 @@ class KeplerApp(App):
             return
 
         if self.mode == "role":
-            self._start(text)
+            choice = parse_role(text)
+            if choice is None:
+                self._w("[dim]Unrecognised. Type 1, 2, or 3 — or a name: mara, valdorf, jonah.[/]")
+                return
+            self._start(choice)
             return
 
         if self.mode == "leaderboard":
@@ -263,7 +268,7 @@ class KeplerApp(App):
 
     # ------------------------------------------------------------------ #
     def _start(self, choice: str) -> None:
-        player = self.engine.new_game(choice if choice in ("1", "2", "3") else "1")
+        player = self.engine.new_game(choice)
         self.rlog.clear()
         self._w(f"[b]{escape(player.name)}[/]. {player.type.replace('_', ' ').title()}.")
         for line in ROLE_FLAVOR[player.type].split("\n"):
