@@ -1381,6 +1381,213 @@ def create_rooms() -> dict:
         hidden_items=[],
     )
 
+    # ── M. Maintenance / Vent Network (M01-M30) ──────────────────────────────
+    # Hidden crawlspace rooms. The alien uses these freely; so can the player.
+    # Descriptions are sparse — these spaces are not meant to be comfortable.
+
+    def mroom(rid, name, desc, exits_dict):
+        r = Room(name=name, description=desc, items=[], exits=exits_dict, hidden_items=[])
+        r.ambient_sound = 1  # pipes and air handlers, constant
+        rooms[rid] = r
+
+    # Forward section — Zones A-B
+    mroom("m01", "Forward Maintenance Shaft",
+        "A low crawlway behind the forward sensor panels.\n"
+        "Service lights only. The panels tick and hum.",
+        {"east": "a02", "south": "a05", "west": "m03"})
+
+    mroom("m02", "Bridge Access Shaft",
+        "A vertical service ladder beneath the bridge deck.\n"
+        "Grease on the rungs. Fresh.",
+        {"up": "a04", "east": "m03"})
+
+    mroom("m03", "Forward Hub",
+        "A wider junction where three maintenance shafts meet.\n"
+        "Old inspection tags on the wall. The most recent is missing its date.",
+        {"east": "m01", "west": "m02", "north": "m04", "south": "a07"})
+
+    mroom("m04", "Security Access Shaft",
+        "A shaft running through the security block.\n"
+        "Two panel covers have been removed and not replaced.",
+        {"south": "m03", "down": "b02", "east": "b03", "north": "m05"})
+
+    mroom("m05", "Security Branch",
+        "A side branch off the security shaft.\n"
+        "Scratches on the floor. Something heavy was dragged through here.",
+        {"south": "m04", "up": "b04", "east": "b05"})
+
+    # Cryo section — Zone C
+    mroom("m06", "Cryo North Shaft",
+        "The maintenance passage behind the north cryo airlock.\n"
+        "The seals on this side are intact. Just.",
+        {"east": "c05", "south": "m10"})
+
+    mroom("m07", "Cryo East Shaft",
+        "Behind the east airlock. The hum of the cryo systems is louder here.\n"
+        "Frost forms at the panel seams.",
+        {"west": "c06", "east": "m10"})
+
+    mroom("m08", "Cryo South Shaft",
+        "The maintenance passage behind the south airlock.\n"
+        "A panel has been forced — from the outside.",
+        {"east": "c07", "north": "m10"})
+
+    mroom("m09", "Cryo West Shaft",
+        "Behind the west airlock. The narrowest of the cryo shafts.\n"
+        "Something has left a mark at waist height.",
+        {"east": "c08", "in": "m10"})
+
+    mroom("m10", "Cryo Maintenance Hub",
+        "A wider space connecting all four cryo airlock shafts.\n"
+        "The air is cold enough that your breath shows.\n"
+        "An access panel above leads to the cryo power room.",
+        {"north": "m06", "west": "m07", "south": "m08", "out": "m09",
+         "up": "c12", "east": "m11"})
+
+    # Medical/Science section — Zone D
+    mroom("m11", "Medical Maintenance Junction",
+        "Where the cryo shafts meet the medical access.\n"
+        "A junction box on the wall is open. Someone was in here recently.",
+        {"west": "m10", "north": "d03", "south": "d04", "east": "m12"})
+
+    mroom("m12", "Medical Spine",
+        "A long maintenance corridor running behind the medical rooms.\n"
+        "Emergency lighting only. Everything smells of antiseptic.",
+        {"west": "m11", "east": "d04", "south": "m13"})
+
+    mroom("m13", "Medical/Hab Junction",
+        "Where the medical maintenance shaft branches toward habitation.\n"
+        "Three directions, all dark. A locker on the wall, empty.",
+        {"north": "m12", "east": "d06", "south": "m17"})
+
+    mroom("m14", "Science Upper Shaft",
+        "A shaft running above the science labs.\n"
+        "The floor vibrates faintly — analysis equipment below.",
+        {"down": "d08", "west": "d09", "south": "m15"})
+
+    mroom("m15", "Science Mid-Shaft",
+        "Mid-level maintenance between the science labs.\n"
+        "Sample containment warnings on stickers. All expired.",
+        {"north": "m14", "down": "d11", "south": "m16"})
+
+    mroom("m16", "Science Lower Shaft",
+        "The lowest science maintenance space, near the quarantine chamber.\n"
+        "The air pressure feels wrong. Slightly off.",
+        {"north": "m15", "up": "d12", "east": "m18"})
+
+    # Habitation section — Zone E
+    mroom("m17", "West Hab Shaft",
+        "A maintenance passage running behind the west residential block.\n"
+        "Personal items stuffed into the crawlway. Someone tried to hide things here.",
+        {"north": "m13", "east": "e03", "south": "m19"})
+
+    mroom("m18", "East Hab Shaft",
+        "Behind the east residential block. Narrow.\n"
+        "A boot print in the dust. Human-sized. Going south.",
+        {"west": "e12", "north": "m16", "south": "m19"})
+
+    mroom("m19", "Hab Maintenance Hub",
+        "The central maintenance hub for the habitation deck.\n"
+        "Five shafts branch from here. In the dark, they all look the same.",
+        {"north": "m17", "west": "m18", "east": "m20", "south": "m22", "out": "e05"})
+
+    mroom("m20", "Kitchen Shaft",
+        "Behind the cafeteria and kitchen.\n"
+        "Warm here — the kitchen machinery keeps this shaft above ambient temperature.",
+        {"west": "m19", "up": "e07", "south": "m21"})
+
+    mroom("m21", "Freezer Shaft",
+        "Below the kitchen, near the freezer units.\n"
+        "The cold comes through the wall. So does a smell you don't want to name.",
+        {"north": "m20", "up": "e08", "south": "m23"})
+
+    mroom("m22", "Chapel Shaft",
+        "Behind the chapel and lounge east.\n"
+        "Quiet here, even for a maintenance shaft.",
+        {"north": "m19", "up": "e09", "east": "m23"})
+
+    # Engineering section — Zone F
+    mroom("m23", "Engineering Junction",
+        "The maintenance hub for the engineering deck.\n"
+        "Pipes everywhere, all labeled. The labels are covered in someone's handwriting:\n"
+        "DO NOT RESTART. NO NO NO DO NOT RESTART.",
+        {"north": "m21", "west": "m22", "up": "f02", "south": "m24"})
+
+    mroom("m24", "Processing Shaft",
+        "Behind the water and waste processing rooms.\n"
+        "The smell here has weight. You breathe through your mouth.",
+        {"north": "m23", "up": "f05", "south": "m25"})
+
+    mroom("m25", "Waste Shaft",
+        "Below the waste processing unit.\n"
+        "Running liquid somewhere behind the wall. Do not think about it.",
+        {"north": "m24", "up": "f06", "south": "m26"})
+
+    mroom("m26", "Power Shaft",
+        "Beneath the power distribution room.\n"
+        "The hum of electrical systems is constant. Your scanner has trouble here.",
+        {"north": "m25", "up": "f08", "east": "m27"})
+    rooms["m26"].scanner_interference = True
+
+    mroom("m27", "Generator Shaft",
+        "Below the generator room. When the generator runs, this shaft vibrates.\n"
+        "Right now it is silent. That is worse.",
+        {"west": "m26", "up": "f09", "south": "m28"})
+
+    mroom("m28", "Reactor Access Shaft",
+        "The maintenance shaft beneath the reactor chamber.\n"
+        "Heat radiates through the floor. You don't stay longer than you have to.",
+        {"north": "m27", "up": "f11", "south": "m29"})
+    rooms["m28"].ambient_sound = 2  # reactor vibration
+
+    # Cargo section — Zone G
+    mroom("m29", "Cargo Access Hub",
+        "Above the cargo bays. A junction with access down into both bays.\n"
+        "Fresh scratch marks on the ceiling panel. Made from below.",
+        {"north": "m28", "south": "m30", "down": "g02", "in": "g03"})
+
+    mroom("m30", "Docking Shaft",
+        "The aft-most maintenance space, above the docking level.\n"
+        "A panel opens into the escape pod corridor. Emergency access.\n"
+        "Something has been through here — the grate is warm.",
+        {"north": "m29", "up": "g06", "out": "g08"})
+
+    # ── Hidden exits from visible rooms into the M-network ────────────────────
+    # (Entries listed in SHIP.md as "hidden" — the player finds them by exploring)
+    hidden_exits = {
+        "a02": {"west": "m01"},
+        "a04": {"down": "m02"},
+        "b02": {"up": "m04"},
+        "b04": {"down": "m05"},
+        "c05": {"west": "m06"},
+        "c06": {"east": "m07"},
+        "c07": {"west": "m08"},
+        "c08": {"west": "m09"},
+        "c12": {"down": "m10"},
+        "d04": {"west": "m12"},
+        "d06": {"west": "m13"},
+        "d08": {"up": "m14"},
+        "d11": {"up": "m15"},
+        "d12": {"down": "m16"},
+        "e03": {"west": "m17"},
+        "e12": {"east": "m18"},
+        "e07": {"down": "m20"},
+        "e08": {"down": "m21"},
+        "e09": {"down": "m22"},
+        "f02": {"down": "m23"},
+        "f05": {"down": "m24"},
+        "f06": {"down": "m25"},
+        "f08": {"down": "m26"},
+        "f09": {"down": "m27"},
+        "f11": {"down": "m28"},
+        "g02": {"up": "m29"},
+        "g03": {"up": "m29"},
+        "g06": {"down": "m30"},
+        "g08": {"in": "m30"},
+    }
+    for room_id, extra_exits in hidden_exits.items():
+        rooms[room_id].exits.update(extra_exits)
+
     # ── Apply room IDs, hiding spots, ambient sound, scanner interference ─────
 
     for room_id, room in rooms.items():
