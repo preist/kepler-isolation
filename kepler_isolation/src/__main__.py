@@ -303,6 +303,7 @@ Usage:
   ./play [options]          (or: python3 src/__main__.py [options])
 
 Options:
+  --gui         Launch the PySide6 windowed GUI (needs: pip install PySide6).
   --tui         Launch the rich Textual UI (needs: pip install textual).
   --classic     Force the plain text mode (the default).
   --fast        Skip the typewriter pacing on dramatic beats.
@@ -316,6 +317,14 @@ In-game, type 'help' for the command list."""
 def main():
     if "--help" in sys.argv or "-h" in sys.argv:
         print(USAGE)
+        return
+    if "--gui" in sys.argv and "--classic" not in sys.argv:
+        try:
+            import gui
+        except ImportError as exc:
+            print(f"The GUI needs PySide6:  pip install PySide6  ({exc})")
+            return
+        gui.run()
         return
     if "--tui" in sys.argv and "--classic" not in sys.argv:
         try:

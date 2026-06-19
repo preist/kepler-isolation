@@ -1,7 +1,7 @@
 SRC   := kepler_isolation/src
 TESTS := kepler_isolation/tests
 
-.PHONY: fmt lint typecheck test check clean run tui install-dev help
+.PHONY: fmt lint typecheck test check clean run tui gui install-dev install-gui help
 
 # ── Default ───────────────────────────────────────────────────────────────────
 help:
@@ -21,9 +21,11 @@ help:
 	@echo "  Play"
 	@echo "    make run          classic text mode"
 	@echo "    make tui          Textual rich UI (needs: pip install textual)"
+	@echo "    make gui          PySide6 windowed GUI (needs: pip install PySide6)"
 	@echo ""
 	@echo "  Bootstrap"
 	@echo "    make install-dev  pip-install all dev dependencies"
+	@echo "    make install-gui  pip-install PySide6 for the GUI"
 	@echo ""
 
 # ── Code quality ──────────────────────────────────────────────────────────────
@@ -59,6 +61,12 @@ run:
 tui:
 	./play --tui
 
+gui:
+	./play --gui
+
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 install-dev:
 	pip install ruff pyright pytest textual
+
+install-gui:
+	pip install PySide6
