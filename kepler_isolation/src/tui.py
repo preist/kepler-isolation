@@ -131,10 +131,10 @@ class KeplerApp(App):
         for line in INTRO_BODY:
             self.rlog.write(line)
         self.rlog.write("")
-        self.rlog.write("HALLOWAY-TANAKA PERSONNEL — assign role:")
-        self.rlog.write("  1. Crew        — Elias Cole")
-        self.rlog.write("  2. Synthetic   — Jonah")
-        self.rlog.write("  3. Contractor  — Rourke Dunmore")
+        self.rlog.write("NIGHTGLASS PERSONNEL — assign identity:")
+        self.rlog.write("  1. Crew        — Mara Vale")
+        self.rlog.write("  2. Synthetic   — Valdorf")
+        self.rlog.write("  3. Contractor  — Jonah Rusk")
         self.rlog.write("")
         self.rlog.write("Type 1, 2, or 3.")
         self.query_one("#cmd", Input).focus()
@@ -224,7 +224,7 @@ class KeplerApp(App):
         self._w(f"[b]{escape(player.name)}[/]. {player.type.replace('_', ' ').title()}.")
         for line in ROLE_FLAVOR[player.type].split("\n"):
             self.rlog.write(line)
-        self.rlog.write("The manifest lists him, and no one else.")
+        self.rlog.write("The cryo bay is quiet. No one else woke.")
         self.rlog.write("")
         self.mode = "play"
         self._write_room()
@@ -234,7 +234,7 @@ class KeplerApp(App):
         p = self.engine.player
         self.engine.new_game(player=Player(p.name, p.gender, p.type))
         self.rlog.clear()
-        self._w("[dim]The descent sedation lifts. Again.[/]")
+        self._w("[dim]The cryo cycle resets. Again.[/]")
         self.rlog.write("")
         self.mode = "play"
         self._write_room()

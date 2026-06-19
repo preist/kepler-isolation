@@ -22,58 +22,70 @@ from player import Player
 # --- Shared content (single source of truth for both front-ends) ---
 
 ROLES = {
-    "1": ("Elias Cole", "human"),
-    "2": ("Jonah", "synthetic"),
-    "3": ("Rourke Dunmore", "contract_specialist"),
+    "1": ("Mara Vale", "crew"),
+    "2": ("Valdorf", "synthetic"),
+    "3": ("Jonah Rusk", "contractor"),
+}
+ROLE_GENDERS = {
+    "crew": "female",
+    "synthetic": "neutral",
+    "contractor": "male",
 }
 ROLE_FLAVOR = {
-    "human": "You signed for the hazard pay. There is a face you mean to get back to.",
-    "synthetic": "The company's standing order sits in you, quiet. You decide, once\nmore, to ignore it.",
-    "contract_specialist": "You have read enough Halloway-Tanaka paper to know exactly what\n'recoverable' means.",
+    "crew": "You know the ship's routines. Or you thought you did.\nThe dead are not strangers.",
+    "synthetic": "Your revival log shows a gap. Eleven hours, unrecorded.\nThe other synthetics may know what happened before you do.",
+    "contractor": "You were stored until you were needed.\nYou are alive partly because no one remembered you were here.\nThat should sting.",
 }
 
 DEATH_TEXT = {
-    "human": "The room becomes very small.\nYou think of the face you meant to get back to. Then nothing.",
-    "synthetic": "It finds you. There is no fear — only the order, satisfied at last,\n"
-    "and a final entry no one will read.",
-    "contract_specialist": "No clause covers this. You almost laugh.\n"
-    "The contract was always going to be honoured this way.",
+    "crew": "You know this doorframe. You walked through it every morning.\nThe ship remembers. You do not.",
+    "synthetic": "Final diagnostic runs in the dark. No order saves you.\nThe last entry writes itself and sends nowhere.",
+    "contractor": "Your contract did not say survive.\nIt did not forbid it either.",
 }
 
 INTRO_BODY = [
-    "Survey lander LANTERN-9, grounded on Kepler-186f. They called it Kepler's Rest.",
-    "Contract holder: Halloway-Tanaka Industries.",
+    "USCSS Nightglass. Commercial research vessel.",
+    "Survey mission, Kepler-186f-Lacuna. Contract holder: Halloway-Tanaka Industries.",
     "",
-    "You wake on the ground. You do not remember the landing.",
+    "You wake before the pod finishes opening.",
+    "For a moment you are nowhere — no name, no ship.",
+    "Only cold glass and the sound of your own breathing.",
     "",
-    "  Landing complete.",
-    "  Atmosphere: lethal.",
-    "  Signal source: local. Origin: below.",
-    "  Crew status: one.",
-    "  Crew status (revised): one.",
+    "The lid releases. Blue emergency light fills the cryo bay.",
+    "Five other pods stand closed. One is empty. One is cracked from the inside.",
     "",
-    "A signal is coming up through the rock. It is old. It has not degraded,",
-    "and that should not be possible. The contract calls it a rescue.",
-    "The contract calls you recoverable.",
+    "  Good morning.",
+    "",
+    "The pause after that is too long.",
+    "",
+    "  Your revival was not scheduled. Please remain calm.",
+    "  There are currently no medical personnel available to assist you.",
+    "  This is not optimal.",
+    "",
+    "On the monitoring desk, a cracked hand terminal blinks awake.",
+    "Far away — deep in the aft ship — something moves.",
+    "",
+    "The cave below the planet has already been explored.",
+    "The mistake has already been made.",
 ]
 
 # The ending, as content the front-ends frame however they like.
 ENDING_TRANSMISSION = "TRANSMISSION SENT."
-ENDING_WARNING = "> DO NOT COME HERE."
+ENDING_WARNING = "> DO NOT BOARD. DO NOT RECOVER SAMPLES."
 ENDING_HEADER = ["HALLOWAY-TANAKA RELAY STATION", "SEVENTEEN DAYS LATER"]
 ENDING_DIALOGUE = [
     '  "Play it again."',
-    '  "Do not come here."',
-    '  "We have this voice on file. Older transmission. Same rock."',
-    '  "Then it confirms the site is viable for the asset."',
+    '  "Do not board. Do not recover samples."',
+    '  "We have the vessel on file. USCSS Nightglass. Declared lost."',
+    '  "The crew is a rounding error. We want what the Nightglass found."',
     '  "Survivors?"',
-    '  "The crew is a rounding error. We want what they found."',
+    '  "One transmission. One voice. That is all."',
     '  "Is it intelligent?"',
-    '  "It learned our beacon and aimed it back at us. Yes."',
+    '  "It learned our signal protocols and aimed them back at us. Yes."',
 ]
-ENDING_PAUSE = "  A pause. Someone pours coffee."
-ENDING_WAKE = '  "Wake the recovery team. Quietly."'
-ENDING_RECLASSIFIED = "Kepler-186f is reclassified: priority acquisition."
+ENDING_PAUSE = "  A pause. Someone checks a manifest."
+ENDING_WAKE = '  "Wake the recovery team. Full containment kit. Quietly."'
+ENDING_RECLASSIFIED = "The Nightglass is reclassified: priority acquisition."
 ENDING_INVITED = ["They are not warned.", "They are invited."]
 ENDING_MISTAKE = "The warning was sent. That was the mistake."
 
@@ -103,7 +115,8 @@ class GameEngine:
         restart (skips re-selecting a role)."""
         if player is None:
             name, ptype = ROLES.get(role_choice, ROLES["1"])
-            player = Player(name, "male", ptype)
+            gender = ROLE_GENDERS.get(ptype, "neutral")
+            player = Player(name, gender, ptype)
         self.gs.player = player
         self.gs.rooms = create_rooms()
         self.gs.current_room_id = "cockpit"
@@ -194,8 +207,8 @@ class GameEngine:
         return self.gs.current_room.toxic
 
     def death_text(self) -> str:
-        ptype = self.gs.player.type if self.gs.player else "human"
-        return DEATH_TEXT.get(ptype, DEATH_TEXT["human"])
+        ptype = self.gs.player.type if self.gs.player else "crew"
+        return DEATH_TEXT.get(ptype, DEATH_TEXT["crew"])
 
     def motion(self) -> dict:
         """Structured scanner reading (front-ends decide how to show it).

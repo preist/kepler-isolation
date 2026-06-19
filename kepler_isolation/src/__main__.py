@@ -109,16 +109,15 @@ class ClassicGame:
         print()
 
     def create_character(self):
-        print("HALLOWAY-TANAKA PERSONNEL — assign role:")
-        print("  1. Crew        — Elias Cole")
-        print("  2. Synthetic   — Jonah")
-        print("  3. Contractor  — Rourke Dunmore")
+        print("NIGHTGLASS PERSONNEL — assign identity:")
+        print("  1. Crew        — Mara Vale")
+        print("  2. Synthetic   — Valdorf")
+        print("  3. Contractor  — Jonah Rusk")
         choice = input("> ").strip()
         player = self.engine.new_game(choice)
         label = player.type.replace("_", " ").title()
         print(f"\n{player.name}. {label}.")
         print(ROLE_FLAVOR[player.type])
-        print("The manifest lists him, and no one else.")
         print("\nType 'help' at any time.\n")
 
     # ------------------------------------------------------------------ #
@@ -278,7 +277,7 @@ class ClassicGame:
         player = Player(prev.name, prev.gender, prev.type)
         self.engine.new_game(player=player)
         print("\n" + RULE)
-        print("The descent sedation lifts. Again.")
+        print("The cryo cycle resets. Again.")
         print(RULE)
         self.main_loop()
 
