@@ -197,7 +197,7 @@ class KeplerGUI(QMainWindow):
         self.engine = GameEngine()
         self.mode = "role"  # role | play | leaderboard | over
         self._lb_qualifies = False
-        self._font = self._make_mono(11)
+        self._font = self._make_mono(13)
         self._small_font = self._make_mono(10)
         self._apply_palette()
         self._build_ui()
@@ -650,8 +650,21 @@ class KeplerGUI(QMainWindow):
             self._show_ending()
             return
         if result.next_life:
+            gs = self.engine.gs
+            new_player = self.engine.player
+            lives_left = 3 - gs.lives_used
+            self._w("")
+            self._w_rule()
+            self._w(
+                f"You now play as {new_player.name}.  "
+                f"{lives_left} {'life' if lives_left == 1 else 'lives'} remaining.",
+                color=_AMBER,
+                bold=True,
+            )
+            self._w_rule()
             self._write_room()
             self._refresh()
+            self._set_image(_monster_pixmap())
             return
         if result.dead:
             self._show_death()
