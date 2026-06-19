@@ -87,23 +87,35 @@ _GREEN = "#4a7c50"
 # ---------------------------------------------------------------------------
 # Asset resolution
 # ---------------------------------------------------------------------------
-_ROOMS_DIR = Path(__file__).parent.parent / "assets" / "rooms"
+_ASSETS = Path(__file__).parent.parent / "assets"
+_ROOMS_DIR = _ASSETS / "rooms"
+_CHARS_DIR = _ASSETS / "characters"
+
+# Player type → character image stem
+_CHAR_IMAGE = {"crew": "mara", "synthetic": "valdorf", "contractor": "jonah"}
 
 
-def _room_pixmap(room_id: str) -> "QPixmap | None":
-    """Return a QPixmap for this room, or None.
-
-    Drop square PNGs into:  kepler_isolation/assets/rooms/{room_id}.png
-    e.g. c09.png, a07.png, g11.png
-    """
-    if not room_id:
-        return None
-    p = _ROOMS_DIR / f"{room_id}.png"
-    if p.exists():
-        px = QPixmap(str(p))
+def _load_png(path: Path) -> "QPixmap | None":
+    if path.exists():
+        px = QPixmap(str(path))
         if not px.isNull():
             return px
     return None
+
+
+def _room_pixmap(room_id: str) -> "QPixmap | None":
+    """Square PNG from assets/rooms/{room_id}.png, or None."""
+    return _load_png(_ROOMS_DIR / f"{room_id}.png") if room_id else None
+
+
+def _char_pixmap(player_type: str) -> "QPixmap | None":
+    """Square PNG from assets/characters/{name}.png for crew/synthetic/contractor."""
+    stem = _CHAR_IMAGE.get(player_type, player_type)
+    return _load_png(_CHARS_DIR / f"{stem}.png")
+
+
+def _monster_pixmap() -> "QPixmap | None":
+    return _load_png(_CHARS_DIR / "monster.png")
 
 
 # ---------------------------------------------------------------------------
@@ -503,20 +515,15 @@ class KeplerGUI(QMainWindow):
         inv = e.inventory
         self._p_carry.set_text(", ".join(inv) if inv else "nothing")
 
-    def _refresh_image(self) -> None:
-        room_id = self.engine.gs.current_room_id
-        px = _room_pixmap(room_id)
+    def _set_image(self, px: "QPixmap | None") -> None:
+        """Display any square PNG in the image frame, or hide the frame."""
         if px is None:
-            # Hide the image panel entirely when no image is available.
             self._img_frame.setVisible(False)
             return
-
         self._img_frame.setVisible(True)
-        # Cover: scale the square PNG to fill the frame (max 400×400), centre-crop
-        # any overflow so neither dimension ever shows a gap.
         fw = min(self._img_frame.width() or 400, 400)
         fh = min(self._img_frame.height() or 400, 400)
-        side = max(fw, fh)  # square images → one scale step covers both axes
+        side = max(fw, fh)
         scaled = px.scaled(
             QSize(side, side),
             Qt.AspectRatioMode.KeepAspectRatio,
@@ -526,6 +533,9 @@ class KeplerGUI(QMainWindow):
         oy = (scaled.height() - fh) // 2
         self._img_label.setPixmap(scaled.copy(ox, oy, fw, fh))
         self._img_label.setText("")
+
+    def _refresh_image(self) -> None:
+        self._set_image(_room_pixmap(self.engine.gs.current_room_id))
 
     # ------------------------------------------------------------------ #
     # Command dispatch
@@ -596,6 +606,8 @@ class KeplerGUI(QMainWindow):
         self.mode = "play"
         self._write_room()
         self._refresh()
+        # Show the chosen character portrait; room images take over on first move.
+        self._set_image(_char_pixmap(player.type))
 
     def _restart(self) -> None:
         p = self.engine.player
@@ -619,6 +631,7 @@ class KeplerGUI(QMainWindow):
         self._w("Type 'restart' or 'quit'.", color=_DIM)
         self.mode = "over"
         self._refresh()
+        self._set_image(_monster_pixmap())
 
     def _show_ending(self) -> None:
         self._w("")
