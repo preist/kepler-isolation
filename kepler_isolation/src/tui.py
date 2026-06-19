@@ -222,6 +222,13 @@ class KeplerApp(App):
             self.mode = "leaderboard" if self._lb_qualifies else "over"
             self._refresh()
             return
+        if result.next_life:
+            # A character died but the next one just woke — show transition and
+            # continue.  The engine already moved current_room_id back to c09.
+            self.rlog.write("")
+            self._write_room()
+            self._refresh()
+            return
         if result.dead:
             self._show_death()
             self.mode = "over"
@@ -240,7 +247,11 @@ class KeplerApp(App):
         self._w(f"[b]{escape(player.name)}[/]. {player.type.replace('_', ' ').title()}.")
         for line in ROLE_FLAVOR[player.type].split("\n"):
             self.rlog.write(line)
-        self.rlog.write("The cryo bay is quiet. No one else woke.")
+        pod_text = self.engine.sleeping_pod_text()
+        if pod_text:
+            self.rlog.write("")
+            for line in pod_text.split("\n"):
+                self.rlog.write(line)
         self.rlog.write("")
         self.mode = "play"
         self._write_room()
@@ -261,7 +272,7 @@ class KeplerApp(App):
         if self.engine.gs.death_state == "monster":
             for line in self.engine.death_text().split("\n"):
                 self._w(f"[red]{escape(line)}[/]")
-        self._w("[bold red]You died.[/]")
+        self._w("[bold red]All three crew members dead. The mission is over.[/]")
         self._w("[dim]Type 'restart' or 'quit'.[/]")
 
     def _show_ending(self) -> None:

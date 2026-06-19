@@ -488,6 +488,11 @@ class GameState:
         self.random_seed = None
         self.rng = random.Random()
 
+        # Three-life system: ordered queue of characters not yet played.
+        # First entry is the current player; remainder are still in cryo.
+        self.character_queue: list = []
+        self.lives_used: int = 0
+
     # ------------------------------------------------------------------ #
     # Small helpers
     # ------------------------------------------------------------------ #

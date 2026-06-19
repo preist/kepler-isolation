@@ -64,6 +64,7 @@ def test_motion_no_device_then_bearing():
 def test_win_via_full_radio_path():
     e = make_engine()
     gs = e.gs
+    gs.monster.active = False  # focus on win path, not monster timing
     # Grab all 7 radio parts.
     for room_id, item_name in [
         ("a07", "transmitter coil"),
@@ -109,6 +110,89 @@ def test_bodies_and_synthetics_spawn():
     synths = sum(1 for r in gs.rooms.values() for i in r.items if i.synthetic_data)
     assert bodies == 20
     assert synths == 3
+
+
+def test_sleeping_pod_text_shows_other_characters():
+    e = make_engine(role="1")  # Mara Vale (crew)
+    text = e.sleeping_pod_text()
+    assert "VALDORF" in text
+    assert "JONAH RUSK" in text or "CONTRACTOR" in text
+
+
+def test_next_life_on_death_with_lives_remaining():
+    e = make_engine(role="1")
+    gs = e.gs
+    # Give player an item so we can verify it transfers to the death room.
+    from item import Item
+
+    gs.player.inventory.append(Item("test item", "item", "a test item", portable=True))
+    prev_name = gs.player.name  # Mara Vale
+    death_room = gs.current_room_id
+
+    # Simulate instant death.
+    gs.death_state = "monster"
+    gs.advance = True
+    r = e.submit("look")
+
+    assert r.next_life is True
+    assert r.dead is None
+    # Engine moved to next character.
+    assert gs.player.name != prev_name
+    assert gs.current_room_id == "c09"
+    # Dead player's item dropped in death room.
+    room_items = {i.name for i in gs.rooms[death_room].items}
+    assert "test item" in room_items
+    # A body was placed there.
+    bodies = [i for i in gs.rooms[death_room].items if i.name == "body"]
+    assert any(prev_name in b.description for b in bodies)
+
+
+def test_third_death_is_final():
+    e = make_engine(role="1")
+    gs = e.gs
+    # Kill first character.
+    gs.death_state = "monster"
+    gs.advance = True
+    r = e.submit("look")
+    assert r.next_life is True
+    # Kill second character.
+    gs.death_state = "monster"
+    gs.advance = True
+    r = e.submit("look")
+    assert r.next_life is True
+    # Kill third — no lives left.
+    gs.death_state = "monster"
+    gs.advance = True
+    r = e.submit("look")
+    assert r.dead is not None
+    assert r.next_life is False
+
+
+def test_save_load_preserves_character_queue():
+    import save
+
+    e = make_engine(role="1")
+    gs = e.gs
+    # Kill first character to advance queue.
+    gs.death_state = "monster"
+    gs.advance = True
+    e.submit("look")
+    assert gs.lives_used == 1
+
+    import os
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    try:
+        save.save_game(gs, path)
+        gs.character_queue = []
+        gs.lives_used = 0
+        save.load_game(gs, path)
+        assert gs.lives_used == 1
+        assert len(gs.character_queue) == 2
+    finally:
+        os.unlink(path)
 
 
 def test_monster_blocked_from_safe_haven():

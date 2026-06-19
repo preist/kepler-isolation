@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from game_state import GameState
+from item import Item
 from map_builder import create_rooms
 from parser import Parser
 from player import Player
@@ -42,6 +43,34 @@ DEATH_TEXT = {
     "synthetic": "Final diagnostic runs in the dark. No order saves you.\nThe last entry writes itself and sends nowhere.",
     "contractor": "Your contract did not say survive.\nIt did not forbid it either.",
 }
+
+# The ordered roster of all three characters.  When building the queue we put
+# the chosen character first; the remaining two follow in this fixed order.
+_ALL_CHARACTERS = [
+    {"name": "Mara Vale", "type": "crew", "gender": "female"},
+    {"name": "Valdorf", "type": "synthetic", "gender": "neutral"},
+    {"name": "Jonah Rusk", "type": "contractor", "gender": "male"},
+]
+
+_DEATH_EPITAPH = {
+    "crew": "Listed by MOTHER-LACUNA as a misplaced personnel event.",
+    "synthetic": "Final diagnostic filed. No response to ping.",
+    "contractor": "The contract did not cover this.",
+}
+
+_POD_LABEL = {
+    "crew": "MARA VALE — CREW",
+    "synthetic": "VALDORF — UNIT 7 — SYNTHETIC",
+    "contractor": "JONAH RUSK — CONTRACTOR",
+}
+
+
+def _build_char_queue(role_choice: str) -> list:
+    idx = {"1": 0, "2": 1, "3": 2}.get(role_choice, 0)
+    chosen = _ALL_CHARACTERS[idx]
+    rest = [c for c in _ALL_CHARACTERS if c is not chosen]
+    return [chosen] + rest
+
 
 INTRO_BODY = [
     "USCSS Nightglass. Commercial research vessel.",
@@ -98,7 +127,8 @@ class TurnResult:
     advanced: bool = False
     room_changed: bool = False
     boarded_now: bool = False  # the creature came aboard on this turn
-    dead: str | None = None  # death cause, or None
+    dead: str | None = None  # death cause, or None (final death — no lives left)
+    next_life: bool = False  # a character died but the next one just woke up
     won: bool = False
     quit: bool = False
     restart: bool = False
@@ -123,11 +153,39 @@ class GameEngine:
         self.gs.rooms["c09"].visited = True
         self.gs.visited_rooms.add("c09")
         self.gs.game_phase = "exploring"
+        self.gs.death_state = None
+        self.gs.win_state = False
+        # Three-life queue: current character first, others follow.
+        queue = _build_char_queue(role_choice)
+        # Keep queue if restarting with same player (preserves used-life count).
+        if not self.gs.character_queue or player not in [
+            Player(c["name"], c["gender"], c["type"]) for c in self.gs.character_queue
+        ]:
+            self.gs.character_queue = queue
+            self.gs.lives_used = 0
         # Monster starts active at the aft of the ship.
         self.gs.board_monster("g11")
         # Scatter bodies and synthetics across the ship.
         self.gs.spawn_random_entities()
         return player
+
+    def sleeping_pod_text(self) -> str:
+        """One-time flavour shown just after role selection: the other pods."""
+        sleeping = self.gs.character_queue[1:]
+        if not sleeping:
+            return ""
+        labels = "\n".join(f"  {_POD_LABEL[c['type']]}" for c in sleeping)
+        return (
+            f"Two pods beside yours are sealed.\n"
+            f"Frost on the glass. Labels visible:\n"
+            f"{labels}\n"
+            f"They do not know what you are waking into."
+        )
+
+    @property
+    def lives_left(self) -> int:
+        """Characters still available, including the current one."""
+        return max(len(self.gs.character_queue), 0)
 
     def submit(self, command: str) -> TurnResult:
         """Run one command through the same pipeline the classic loop used:
@@ -153,12 +211,94 @@ class GameEngine:
         boarded_now = gs.get_flag("monster_boarded") and not was_aboard
 
         if gs.death_state:
+            if len(gs.character_queue) > 1:
+                next_lines = self._transition_to_next_life(lines)
+                return TurnResult(next_lines, advanced=advanced, next_life=True, boarded_now=boarded_now)
             return TurnResult(lines, advanced=advanced, dead=gs.death_state, boarded_now=boarded_now)
         if gs.win_state:
             return TurnResult(lines, advanced=advanced, won=True, boarded_now=boarded_now)
         return TurnResult(
             lines, advanced=advanced, room_changed=(gs.current_room_id != before), boarded_now=boarded_now
         )
+
+    # ------------------------------------------------------------------ #
+    def _transition_to_next_life(self, death_lines: list[str]) -> list[str]:
+        """Record the dead player, wake the next character, return narrative."""
+        gs = self.gs
+        prev = gs.character_queue[0]
+        next_char = gs.character_queue[1]
+
+        # Drop all inventory to the death room so the next player can find it.
+        death_room_id = gs.current_room_id
+        death_room = gs.rooms[death_room_id]
+        death_room_name = death_room.name
+        if gs.player is not None:
+            for item in list(gs.player.inventory):
+                death_room.items.append(item)
+            for item in list(gs.player.worn_items):
+                item.worn = False
+                death_room.items.append(item)
+            gs.player.inventory.clear()
+            gs.player.worn_items.clear()
+
+        # Leave a body so the next player knows where they fell.
+        alias_name = prev["name"].lower().replace(" ", ",")
+        epitaph = _DEATH_EPITAPH.get(prev["type"], "")
+        predecessor_body = Item(
+            name="body",
+            aliases=f"body,corpse,predecessor,{alias_name},remains",
+            description=(f"{prev['name']}.\n{epitaph}\nThey made it as far as {death_room_name}."),
+            portable=False,
+        )
+        death_room.items.append(predecessor_body)
+
+        # Advance the queue, reset world-state for the new player.
+        gs.character_queue.pop(0)
+        gs.lives_used += 1
+        gs.death_state = None
+        gs.advance = False
+
+        new_player = Player(next_char["name"], next_char["gender"], next_char["type"])
+        gs.player = new_player  # parser reads player via gs, so no parser update needed
+        gs.current_room_id = "c09"
+
+        # Build the transition narrative.
+        remaining = gs.character_queue[1:]  # still sleeping after this wake
+        life_num = gs.lives_used + 1  # e.g. 2 of 3
+        divider = "─" * 58
+
+        lines = death_lines + [
+            "",
+            divider,
+            "",
+            f"{prev['name']} is dead.",
+            epitaph,
+            "",
+            "The cryo system registers the absence.",
+            "Another pod opens in Bay Alpha.",
+            "",
+            "  Good morning.",
+            "  Your revival was not scheduled.",
+            (
+                f"  There is {len(remaining)} other occupant in cryo."
+                if len(remaining) == 1
+                else f"  There are {len(remaining)} other occupants in cryo."
+                if remaining
+                else "  You are the last."
+            ),
+            "",
+            ROLE_FLAVOR[next_char["type"]],
+            "",
+            f"You are {next_char['name']}.",
+            "",
+            f"Somewhere on this ship — in {death_room_name} —",
+            f"there is a body that answers to {prev['name']}.",
+            "Everything they were carrying is there.",
+            "",
+            divider,
+            f"[Life {life_num} of 3]",
+        ]
+        return lines
 
     # --- Panel / status accessors -------------------------------------- #
     @property

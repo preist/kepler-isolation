@@ -101,6 +101,8 @@ def to_dict(gs) -> dict:
             "inventory": [_item_to_dict(i) for i in p.inventory],
             "worn": [_item_to_dict(i) for i in p.worn_items],
         },
+        "character_queue": gs.character_queue,
+        "lives_used": gs.lives_used,
         "monster": dict(gs.monster.__dict__),
         "rooms": {
             rid: {
@@ -157,6 +159,10 @@ def load_into(gs, data: dict):
     if pd["hidden"] and pd["hidden_spot_name"]:
         p.hidden_spot = gs.rooms[gs.current_room_id].find_hiding_spot(pd["hidden_spot_name"])
     gs.player = p
+
+    # Three-life system.
+    gs.character_queue = data.get("character_queue", [])
+    gs.lives_used = data.get("lives_used", 0)
 
     # Monster: every field is JSON-safe, so a straight update is enough.
     gs.monster.__dict__.update(data["monster"])

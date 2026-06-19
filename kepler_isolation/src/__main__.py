@@ -118,6 +118,10 @@ class ClassicGame:
         label = player.type.replace("_", " ").title()
         print(f"\n{player.name}. {label}.")
         print(ROLE_FLAVOR[player.type])
+        pod_text = self.engine.sleeping_pod_text()
+        if pod_text:
+            print()
+            print(pod_text)
         print("\nType 'help' at any time.\n")
 
     # ------------------------------------------------------------------ #
@@ -190,6 +194,11 @@ class ClassicGame:
             # The moment it comes aboard earns a held breath.
             if result.boarded_now:
                 self.beat()
+            if result.next_life:
+                # A character died but the next one just woke — show the
+                # transition narrative and continue playing as the new character.
+                self.render_room()
+                continue
             if result.dead:
                 self.handle_death()
                 if self.prompt_again():
@@ -211,7 +220,7 @@ class ClassicGame:
         elif self.gs.death_state == "toxic":
             pass  # already printed by the simulation
         print(RULE)
-        print(self.c("\nYou died.", "1;31"))
+        print(self.c("\nAll three crew members dead. The mission is over.", "1;31"))
 
     def show_ending(self):
         self.beat()
