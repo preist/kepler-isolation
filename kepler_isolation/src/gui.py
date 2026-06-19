@@ -149,7 +149,11 @@ class _Panel(QFrame):
         lay.setSpacing(3)
 
         hdr = QLabel(header.upper())
-        hdr.setStyleSheet(f"color:{_DIM}; font-size:9px; font-weight:700; border:none; letter-spacing:1px;")
+        hdr_font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+        hdr_font.setPointSize(8)
+        hdr_font.setBold(True)
+        hdr.setFont(hdr_font)
+        hdr.setStyleSheet(f"color:{_DIM}; border:none;")
         lay.addWidget(hdr)
 
         self._body = QLabel()
@@ -678,8 +682,13 @@ class KeplerGUI(QMainWindow):
 # Entry point
 # ---------------------------------------------------------------------------
 def run() -> None:
-    app = QApplication.instance() or QApplication(sys.argv)
+    app: QApplication = QApplication.instance() or QApplication(sys.argv)  # type: ignore[assignment]
     app.setApplicationName("KEPLER ISOLATION")
+    # Apply monospace as the application-wide default — every widget inherits it
+    # unless overridden, giving a consistent terminal vibe throughout.
+    mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+    mono.setPointSize(11)
+    app.setFont(mono)
     win = KeplerGUI()
     win.show()
     sys.exit(app.exec())
