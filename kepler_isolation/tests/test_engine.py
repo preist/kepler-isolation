@@ -18,8 +18,10 @@ def make_engine(role="1", seed=0):
 
 def test_submit_moves_and_reports():
     e = make_engine()
-    r = e.submit("south")  # cockpit -> central_corridor
-    assert e.location_name == "Central Corridor"
+    # From C09, take the first exit.
+    first_exit = next(iter(e.gs.current_room.exits))
+    r = e.submit(first_exit)
+    assert e.gs.current_room_id != "c09"
     assert r.room_changed
     assert not r.dead and not r.won
 
@@ -33,8 +35,8 @@ def test_take_updates_inventory_and_terminal():
 
 def test_panel_accessors():
     e = make_engine()
-    assert e.location_name == "Cockpit"
-    assert "south" in e.exits
+    assert "Cryo" in e.location_name  # C09 = Cryo Monitoring Station
+    assert len(e.exits) > 0
     assert "hand terminal" in e.room_items
     assert e.suit_status == "none"
     assert e.sound_level == "silent"
@@ -45,32 +47,53 @@ def test_motion_no_device_then_bearing():
     assert e.motion()["kind"] == "no_device"  # no terminal yet
     e.gs.player.has_terminal = True
     e.gs.monster.active = True
-    e.gs.monster.phase = "aboard"
     e.gs.monster.turns_since_seen = 9
-    e.gs.monster.current_room_id = "communications"
-    e.gs.current_room_id = "cockpit"
+    e.gs.monster.current_room_id = "a07"
+    e.gs.monster.tracked_room_id = "a07"
+    e.gs.current_room_id = "c09"
     m = e.motion()
-    assert m == {"kind": "bearing", "direction": "south", "distance": 7}
-    assert motion_label(m) == "south 7"
+    assert m["kind"] == "bearing"
+    assert "direction" in m
+    assert "meters" in m
+    assert "confidence" in m
+    assert "motion_desc" in m
+    label = motion_label(m)
+    assert label is not None
+    assert "~" in label and "m" in label  # unified meters display: e.g. "N ~75m"
 
 
-def test_win_via_send():
+def test_win_via_full_radio_path():
     e = make_engine()
-    e.gs.current_room_id = "communications"
-    e.gs.player.has_power_coupler = True
-    e.gs.player.has_signal_relay = True
-    e.gs.player.has_antenna_key = True
-    e.submit("repair transmitter")
-    r = e.submit("send do not come here")
+    gs = e.gs
+    gs.monster.active = False  # focus on win path, not monster timing
+    # Grab all 7 radio parts.
+    for room_id, item_name in [
+        ("a07", "transmitter coil"),
+        ("d09", "signal crystal"),
+        ("f08", "power regulator"),
+        ("g11", "antenna coupler"),
+        ("b06", "wire spool"),
+        ("c12", "battery cell"),
+        ("d05", "tape roll"),
+    ]:
+        gs.current_room_id = room_id
+        e.submit(f"take {item_name}")
+
+    gs.current_room_id = "c13"
+    e.submit("craft radio")
+
+    for room_id, item_name in [
+        ("a05", "command keycard"),
+        ("b03", "admin cipher"),
+        ("f10", "manual authorization"),
+    ]:
+        gs.current_room_id = room_id
+        e.submit(f"take {item_name}")
+
+    gs.current_room_id = "a07"
+    e.submit("override ai")
+    r = e.submit("send warning")
     assert r.won is True
-
-
-def test_toxic_death_result():
-    e = make_engine("1")
-    e.gs.current_room_id = "surface"  # toxic, no suit
-    e.submit("wait")
-    r = e.submit("wait")
-    assert r.dead == "toxic"
 
 
 def test_meta_and_control_flags():
@@ -79,3 +102,105 @@ def test_meta_and_control_flags():
     assert r.lines and not r.advanced
     assert e.submit("restart").restart is True
     assert e.submit("quit").quit is True
+
+
+def test_bodies_and_synthetics_spawn():
+    e = make_engine()
+    gs = e.gs
+    bodies = sum(1 for r in gs.rooms.values() for i in r.items if i.name == "body")
+    synths = sum(1 for r in gs.rooms.values() for i in r.items if i.synthetic_data)
+    assert bodies == 20
+    assert synths == 3
+
+
+def test_sleeping_pod_text_shows_other_characters():
+    e = make_engine(role="1")  # Mara Vale (crew)
+    text = e.sleeping_pod_text()
+    assert "VALDORF" in text
+    assert "JONAH RUSK" in text or "CONTRACTOR" in text
+
+
+def test_next_life_on_death_with_lives_remaining():
+    e = make_engine(role="1")
+    gs = e.gs
+    # Give player an item so we can verify it transfers to the death room.
+    from item import Item
+
+    gs.player.inventory.append(Item("test item", "item", "a test item", portable=True))
+    prev_name = gs.player.name  # Mara Vale
+    death_room = gs.current_room_id
+
+    # Simulate instant death.
+    gs.death_state = "monster"
+    gs.advance = True
+    r = e.submit("look")
+
+    assert r.next_life is True
+    assert r.dead is None
+    # Engine moved to next character.
+    assert gs.player.name != prev_name
+    assert gs.current_room_id == "c09"
+    # Dead player's item dropped in death room.
+    room_items = {i.name for i in gs.rooms[death_room].items}
+    assert "test item" in room_items
+    # A body was placed there.
+    bodies = [i for i in gs.rooms[death_room].items if i.name == "body"]
+    assert any(prev_name in b.description for b in bodies)
+
+
+def test_third_death_is_final():
+    e = make_engine(role="1")
+    gs = e.gs
+    # Kill first character.
+    gs.death_state = "monster"
+    gs.advance = True
+    r = e.submit("look")
+    assert r.next_life is True
+    # Kill second character.
+    gs.death_state = "monster"
+    gs.advance = True
+    r = e.submit("look")
+    assert r.next_life is True
+    # Kill third — no lives left.
+    gs.death_state = "monster"
+    gs.advance = True
+    r = e.submit("look")
+    assert r.dead is not None
+    assert r.next_life is False
+
+
+def test_save_load_preserves_character_queue():
+    import save
+
+    e = make_engine(role="1")
+    gs = e.gs
+    # Kill first character to advance queue.
+    gs.death_state = "monster"
+    gs.advance = True
+    e.submit("look")
+    assert gs.lives_used == 1
+
+    import os
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    try:
+        save.save_game(gs, path)
+        gs.character_queue = []
+        gs.lives_used = 0
+        save.load_game(gs, path)
+        assert gs.lives_used == 1
+        assert len(gs.character_queue) == 2
+    finally:
+        os.unlink(path)
+
+
+def test_monster_blocked_from_safe_haven():
+    e = make_engine()
+    gs = e.gs
+    gs.monster.current_room_id = "c08"
+    gs.monster.aggression = 3
+    for _ in range(5):
+        gs.advance_world()
+        assert gs.monster.current_room_id not in {"c09", "c10", "c11", "c12", "c13"}

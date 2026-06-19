@@ -44,6 +44,8 @@ class Monster:
         # Rate-limit vent shortcuts so they stay spice, not teleportation.
         self.vent_cooldown = 0
         self.used_vent_last_move = False
+        # Consecutive turns the alien has been waiting in cryo vestibule (C01-C08).
+        self.cryo_camp_turns = 0
 
     def add_suspicion(self, room_id: str, amount: int):
         if not room_id:

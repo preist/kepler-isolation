@@ -37,8 +37,35 @@ from engine import (
 )
 from player import Player
 
-# Compass glyphs for the tracker bearing.
-ARROWS = {"north": "↑", "south": "↓", "east": "→", "west": "←", "up": "▲", "down": "▼", "in": "⊙", "out": "⊗"}
+# Compass glyphs for the tracker bearing (cardinal + intercardinal).
+ARROWS = {
+    "north": "↑",
+    "south": "↓",
+    "east": "→",
+    "west": "←",
+    "northeast": "↗",
+    "northwest": "↖",
+    "southeast": "↘",
+    "southwest": "↙",
+    "up": "▲",
+    "down": "▼",
+    "in": "⊙",
+    "out": "⊗",
+}
+COMPASS_ABBR = {
+    "north": "N",
+    "south": "S",
+    "east": "E",
+    "west": "W",
+    "northeast": "NE",
+    "northwest": "NW",
+    "southeast": "SE",
+    "southwest": "SW",
+    "up": "UP",
+    "down": "DN",
+    "in": "IN",
+    "out": "OUT",
+}
 
 # Narrow terminals drop the sidebar so the log keeps priority.
 NARROW = 64
@@ -52,8 +79,6 @@ def tracker_markup(m: dict) -> str:
         return f"{head}\n[dim]— no device —[/]"
     if k == "none":
         return f"{head}\n[green]no contacts[/]"
-    if k == "outside":
-        return f"{head}\n[yellow]MOTION: outside[/]\n[dim]distance uncertain[/]"
     if k == "interference":
         return f"{head}\n[yellow]signal scrambled[/]"
     if k == "lost":
@@ -62,12 +87,21 @@ def tracker_markup(m: dict) -> str:
         return "[b red]◢ MOTION TRACKER ◣[/]\n[blink bold red]IT SEES YOU[/]"
     if k == "here":
         return "[b red]◢ MOTION TRACKER ◣[/]\n[bold red]CONTACT — THIS ROOM[/]"
-    # bearing
-    d, dist = m["direction"], m["distance"]
-    color = "red" if dist <= 2 else "yellow"
+    # bearing — meters is the single distance unit
+    d = m.get("direction") or "?"
+    meters = m.get("meters", 0)
+    confidence = m.get("confidence", 70)
+    motion_desc = m.get("motion_desc", "slow")
+    close = meters <= 30  # two rooms away or less
+    color = "red" if close else "yellow"
     arrow = ARROWS.get(d, "•")
-    plural = "" if dist == 1 else "s"
-    return f"[{color}]◢ MOTION TRACKER ◣[/]\n[{color}]{arrow}  {d.upper()}[/]\nDIST: {dist} move{plural}"
+    compass = COMPASS_ABBR.get(d, d.upper())
+    return (
+        f"[{color}]◢ MOTION TRACKER ◣[/]\n"
+        f"[{color}]{arrow}  {compass}[/]\n"
+        f"~{meters}m  {motion_desc}\n"
+        f"[dim]confidence {confidence}%[/]"
+    )
 
 
 def status_markup(engine: GameEngine) -> str:
@@ -85,12 +119,15 @@ def status_markup(engine: GameEngine) -> str:
     if mt is not None:
         if mt in ("SEEN", "HERE"):
             c = "bold red"
-        elif mt in ("interference", "lost", "outside", "none"):
+        elif mt in ("interference", "lost", "none"):
             c = "dim"
-        elif mt.split()[-1].isdigit() and int(mt.split()[-1]) <= 2:
-            c = "red"
         else:
-            c = "yellow"
+            # motion_label now returns "NE ~75m" — color by distance in meters
+            try:
+                meters_val = int(mt.split("~")[1].replace("m", "").strip()) if "~" in mt else 999
+                c = "red" if meters_val <= 30 else "yellow"
+            except (IndexError, ValueError):
+                c = "yellow"
         parts.append(f"[dim]MOTION[/] [{c}]{mt}[/]")
     return "   ".join(parts)
 
@@ -131,10 +168,10 @@ class KeplerApp(App):
         for line in INTRO_BODY:
             self.rlog.write(line)
         self.rlog.write("")
-        self.rlog.write("HALLOWAY-TANAKA PERSONNEL — assign role:")
-        self.rlog.write("  1. Crew        — Elias Cole")
-        self.rlog.write("  2. Synthetic   — Jonah")
-        self.rlog.write("  3. Contractor  — Rourke Dunmore")
+        self.rlog.write("NIGHTGLASS PERSONNEL — assign identity:")
+        self.rlog.write("  1. Crew        — Mara Vale")
+        self.rlog.write("  2. Synthetic   — Valdorf")
+        self.rlog.write("  3. Contractor  — Jonah Rusk")
         self.rlog.write("")
         self.rlog.write("Type 1, 2, or 3.")
         self.query_one("#cmd", Input).focus()
@@ -206,6 +243,13 @@ class KeplerApp(App):
             self.mode = "leaderboard" if self._lb_qualifies else "over"
             self._refresh()
             return
+        if result.next_life:
+            # A character died but the next one just woke — show transition and
+            # continue.  The engine already moved current_room_id back to c09.
+            self.rlog.write("")
+            self._write_room()
+            self._refresh()
+            return
         if result.dead:
             self._show_death()
             self.mode = "over"
@@ -224,7 +268,11 @@ class KeplerApp(App):
         self._w(f"[b]{escape(player.name)}[/]. {player.type.replace('_', ' ').title()}.")
         for line in ROLE_FLAVOR[player.type].split("\n"):
             self.rlog.write(line)
-        self.rlog.write("The manifest lists him, and no one else.")
+        pod_text = self.engine.sleeping_pod_text()
+        if pod_text:
+            self.rlog.write("")
+            for line in pod_text.split("\n"):
+                self.rlog.write(line)
         self.rlog.write("")
         self.mode = "play"
         self._write_room()
@@ -232,9 +280,10 @@ class KeplerApp(App):
 
     def _restart(self) -> None:
         p = self.engine.player
-        self.engine.new_game(player=Player(p.name, p.gender, p.type))
+        role = {"crew": "1", "synthetic": "2", "contractor": "3"}.get(p.type, "1")
+        self.engine.new_game(role, player=Player(p.name, p.gender, p.type))
         self.rlog.clear()
-        self._w("[dim]The descent sedation lifts. Again.[/]")
+        self._w("[dim]The cryo cycle resets. Again.[/]")
         self.rlog.write("")
         self.mode = "play"
         self._write_room()
@@ -245,7 +294,7 @@ class KeplerApp(App):
         if self.engine.gs.death_state == "monster":
             for line in self.engine.death_text().split("\n"):
                 self._w(f"[red]{escape(line)}[/]")
-        self._w("[bold red]You died.[/]")
+        self._w("[bold red]All three crew members dead. The mission is over.[/]")
         self._w("[dim]Type 'restart' or 'quit'.[/]")
 
     def _show_ending(self) -> None:

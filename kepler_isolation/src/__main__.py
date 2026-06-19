@@ -109,16 +109,19 @@ class ClassicGame:
         print()
 
     def create_character(self):
-        print("HALLOWAY-TANAKA PERSONNEL — assign role:")
-        print("  1. Crew        — Elias Cole")
-        print("  2. Synthetic   — Jonah")
-        print("  3. Contractor  — Rourke Dunmore")
+        print("NIGHTGLASS PERSONNEL — assign identity:")
+        print("  1. Crew        — Mara Vale")
+        print("  2. Synthetic   — Valdorf")
+        print("  3. Contractor  — Jonah Rusk")
         choice = input("> ").strip()
         player = self.engine.new_game(choice)
         label = player.type.replace("_", " ").title()
         print(f"\n{player.name}. {label}.")
         print(ROLE_FLAVOR[player.type])
-        print("The manifest lists him, and no one else.")
+        pod_text = self.engine.sleeping_pod_text()
+        if pod_text:
+            print()
+            print(pod_text)
         print("\nType 'help' at any time.\n")
 
     # ------------------------------------------------------------------ #
@@ -140,12 +143,15 @@ class ClassicGame:
         if motion is not None:
             if motion in ("SEEN", "HERE"):
                 code = "1;31"
-            elif motion in ("interference", "lost", "outside", "none"):
+            elif motion in ("interference", "lost", "none"):
                 code = "2"
-            elif motion[-1:].isdigit() and int(motion.split()[-1]) <= 2:
-                code = "31"
             else:
-                code = "33"
+                # motion_label now returns e.g. "NE ~75m" — color by distance
+                try:
+                    meters_val = int(motion.split("~")[1].replace("m", "").strip()) if "~" in motion else 999
+                    code = "1;31" if meters_val <= 30 else "33"
+                except (IndexError, ValueError):
+                    code = "33"
             parts.append(f"{self.c('Motion:', '2')} {self.c(motion, code)}")
         return self.c(" | ", "2").join(parts)
 
@@ -191,6 +197,11 @@ class ClassicGame:
             # The moment it comes aboard earns a held breath.
             if result.boarded_now:
                 self.beat()
+            if result.next_life:
+                # A character died but the next one just woke — show the
+                # transition narrative and continue playing as the new character.
+                self.render_room()
+                continue
             if result.dead:
                 self.handle_death()
                 if self.prompt_again():
@@ -212,7 +223,7 @@ class ClassicGame:
         elif self.gs.death_state == "toxic":
             pass  # already printed by the simulation
         print(RULE)
-        print(self.c("\nYou died.", "1;31"))
+        print(self.c("\nAll three crew members dead. The mission is over.", "1;31"))
 
     def show_ending(self):
         self.beat()
@@ -273,20 +284,20 @@ class ClassicGame:
         return choice.startswith("r")
 
     def restart(self):
-        # Keep the same character to skip re-creation; new_game resets the world.
         prev = self.engine.player
+        role = {"crew": "1", "synthetic": "2", "contractor": "3"}.get(prev.type, "1")
         player = Player(prev.name, prev.gender, prev.type)
-        self.engine.new_game(player=player)
+        self.engine.new_game(role, player=player)
         print("\n" + RULE)
-        print("The descent sedation lifts. Again.")
+        print("The cryo cycle resets. Again.")
         print(RULE)
         self.main_loop()
 
 
 USAGE = """KEPLER ISOLATION — a terminal survival-horror text adventure.
 
-  You land on a toxic planet, explore a cave, and come back with a passenger.
-  Reach Communications, repair the transmitter, and send the warning.
+  You wake aboard the USCSS Nightglass. Something else woke too.
+  Collect radio components, craft a signal, override the AI, and send the warning.
 
 Usage:
   ./play [options]          (or: python3 src/__main__.py [options])

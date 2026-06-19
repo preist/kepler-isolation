@@ -29,6 +29,8 @@ class Item:
         self.install_target = install_target  # What this item can be installed on
         self.sound_on_use = sound_on_use  # Sound level when used (0-4)
         self.required_for_win = required_for_win
+        # Non-None only for synthetic NPCs: {"profile": str, "name": str, "lines": list[str]}
+        self.synthetic_data: dict | None = None
 
     def __str__(self):
         return self.name
@@ -36,10 +38,15 @@ class Item:
     def __repr__(self):
         return f"Item({self.name})"
 
+    @staticmethod
+    def _norm(s: str) -> str:
+        return "".join(c for c in s.lower() if c.isalnum() or c == " ").strip()
+
     def matches_name(self, name: str) -> bool:
-        if name.lower() == self.name.lower():
+        n = self._norm(name)
+        if n == self._norm(self.name):
             return True
         for alias in self.aliases:
-            if name.lower() == alias.lower():
+            if n == self._norm(alias):
                 return True
         return False

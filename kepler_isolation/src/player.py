@@ -12,7 +12,7 @@ class Player:
     def __init__(self, name: str, gender: str, player_type: str):
         self.name = name
         self.gender = gender
-        self.type = player_type  # human, synthetic, contract_specialist
+        self.type = player_type  # crew, synthetic, contractor
 
         # Health and status
         self.health = 100
@@ -21,7 +21,7 @@ class Player:
 
         # Game state
         self.hidden = False
-        self.hidden_spot: dict | None = None  # the spot dict the player is using
+        self.hidden_spot: dict | None = None
         self.last_room_id: str | None = None
         self.stayed_turns_in_room = 0
 
@@ -29,17 +29,17 @@ class Player:
         self.inventory = []
         self.worn_items = []
 
-        # Progress flags mirrored for convenience
+        # Scanner + mission flags
         self.has_terminal = False
-        self.has_power_coupler = False  # installed in transmitter
-        self.has_signal_relay = False
-        self.has_antenna_key = False
-        self.transmitter_repaired = False
+        # Radio mission: collect 4 components, craft in C13, install and transmit in A07
+        self.has_coil = False  # transmitter coil (A07)
+        self.has_crystal = False  # signal crystal (D09)
+        self.has_regulator = False  # power regulator (F08)
+        self.has_coupler = False  # antenna coupler (G11)
+        self.radio_built = False  # improvised radio assembled at C13
 
-    # --- toxic exposure tolerance by type ---
     @property
     def toxic_tolerance(self) -> int:
-        """How many turns in toxic air before death (without a suit)."""
         return 3 if self.type == "synthetic" else 2
 
     def wear_item(self, item):
@@ -72,5 +72,5 @@ class Player:
     def is_wearing_suit(self):
         return self.suit_worn
 
-    def installed_parts(self) -> int:
-        return sum([self.has_power_coupler, self.has_signal_relay, self.has_antenna_key])
+    def radio_component_count(self) -> int:
+        return sum([self.has_coil, self.has_crystal, self.has_regulator, self.has_coupler])

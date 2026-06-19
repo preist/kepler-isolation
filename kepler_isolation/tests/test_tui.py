@@ -32,7 +32,7 @@ def test_tui_role_take_move():
             await pilot.press("enter")
             await pilot.pause()
             assert app.mode == "play"
-            assert app.engine.location_name == "Cockpit"
+            assert "Cryo" in app.engine.location_name  # C09
 
             inp.value = "take hand terminal"
             await pilot.press("enter")
@@ -41,10 +41,12 @@ def test_tui_role_take_move():
             assert "CARRYING" in _content(app, "#inv")
             assert "MOTION TRACKER" in _content(app, "#tracker")
 
-            inp.value = "south"
+            # Move in first available direction.
+            first_exit = next(iter(app.engine.exits))
+            inp.value = first_exit
             await pilot.press("enter")
             await pilot.pause()
-            assert app.engine.location_name == "Central Corridor"
+            assert app.engine.gs.current_room_id != "c09"
             assert "EXITS" in _content(app, "#exits")
 
     asyncio.run(scenario())

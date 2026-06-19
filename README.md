@@ -1,158 +1,237 @@
-# KEPLER ISOLATION
+# Nightglass Isolation
 
-*A short, lethal terminal horror game. Zork's parser by way of Alien: Isolation's dread.*
-
----
-
-A distress signal is coming from beneath a dead world. It is old. It has not
-degraded. That should not be possible.
-
-You are contract labour for **Halloway-Tanaka Industries**, aboard the survey
-lander **LANTERN-9**. The air outside kills in two breaths without a suit. The
-signal is coming from a cave below the landing site, and your contract says to
-find out what's making it.
-
-You will. And it will come back up with you.
-
-What follows is one creature — not a scripted jump scare but a real thing moving
-through a real ship, hunting by sound. A motion scanner that is useful, and
-never quite enough. Hiding that works once or twice, not forever. A transmitter
-to repair and a warning to send, before it finds you in the dark.
-
-It takes about thirty minutes. You will probably die first. That's how you learn
-the ship.
+*A short, lethal terminal horror game. Zork's parser by way of industrial space dread.*
 
 ---
 
-## Quick start
+You wake inside a cryo pod aboard the **USCSS Nightglass**.
 
-You need **Python 3.8 or newer**. The game uses only the standard library — no
-packages to install, nothing to download but this repository.
+The room is half-dark. The ship is quiet in the wrong way. An onboard AI speaks from the cryo deck, calm enough to make everything worse. Nearby, a cracked hand terminal shows motion, heat, direction, and distance.
 
-**macOS / Linux:**
+Something is alive on the ship.
 
-```sh
-git clone https://github.com/preist/kepler-isolation.git
-cd kepler-isolation
-./play
-```
+It is not crew.
 
-**Windows** (PowerShell or Command Prompt):
+Your goal is simple: restore enough power, build a faster-than-light emergency radio, reach long-range antenna control, and send a warning before anyone comes looking for the ship.
 
-```sh
-git clone https://github.com/preist/kepler-isolation.git
-cd kepler-isolation
-python kepler_isolation\src\__main__.py
-```
-
-That's it. Type `help` at any time in the game.
-
-> No `git`? On the GitHub page click **Code → Download ZIP**, unzip it, open a
-> terminal in the unzipped folder, and run the same launch command.
+The cave has already been explored.  
+The mistake has already been made.  
+Now the only thing left to do is make sure it does not reach Earth.
 
 ---
 
-## Optional: the rich UI
+## What kind of game is this?
 
-There's a second way to play — a modern, **resizable** console interface with a
-status bar, a scrolling narrative log, and side panels (a **motion tracker**,
-exits, items here, inventory). It needs one package:
+**Nightglass Isolation** is a text-only interactive-fiction survival horror game.
 
-```sh
-pip install textual        # or: pip install -r kepler_isolation/requirements-tui.txt
-./play --tui
-```
+Think:
 
-Resize the window and the layout reflows. Everything else plays the same — and
-the classic text mode above needs no install and stays the default.
+- parser commands,
+- a single-deck ship map,
+- vents and maintenance crawls,
+- a scanner that helps but never comforts,
+- a safe cryo haven,
+- random bodies,
+- uncertain synthetics,
+- one alien creature moving through the same world you are.
 
----
-
-## Don't have Python yet?
-
-Check first — open a terminal and run `python3 --version` (macOS/Linux) or
-`python --version` (Windows). If you see a version number `3.8` or higher,
-you're ready. Otherwise:
-
-- **macOS** — Install from [python.org/downloads](https://www.python.org/downloads/),
-  or with [Homebrew](https://brew.sh): `brew install python`.
-- **Windows** — Install from [python.org/downloads](https://www.python.org/downloads/).
-  **Tick "Add python.exe to PATH"** in the installer. Then use `python` (or `py`).
-- **Linux** — It's almost certainly already installed. If not, e.g. on
-  Debian/Ubuntu: `sudo apt install python3`.
-
-No editor, virtual environment, or `pip install` is required.
+The monster is not a scripted jump scare. It moves. It listens. It learns.
 
 ---
 
-## How to play — the first few minutes
+## The four design principles
 
-You wake in the **Cockpit**. The game reads your typed commands; movement and
-common verbs have short aliases, and it forgives minor wording.
+### Atmosphere
 
-A gentle opening run (no spoilers):
+The words are the lighting.
+
+Every room should feel like a flashlight beam cutting through dark: clear, vivid, tense. The ship should feel industrial, cold, damaged, and recently abandoned.
+
+### Player agency
+
+Fear works best when the player chooses.
+
+Run or crawl. Use the hallway or the vent. Carry the heavy tool or leave space for the radio part. Trust the AI or check the terminal yourself.
+
+The player should rarely feel powerful, but they should often feel responsible.
+
+### Pacing
+
+Suspense needs a heartbeat.
+
+Quiet exploration. A bad sound. A discovery. A burst of panic. A return to cryo. A new plan.
+
+The game should breathe so the fear has somewhere to go.
+
+### Clarity
+
+Text has no camera.
+
+Room descriptions, exits, items, scanner readings, and objectives must be readable at a glance. Mystery is good. Confusion is not.
+
+The player should know what they see, even when they do not yet understand what it means.
+
+---
+
+## How to play
+
+The game reads typed commands.
+
+Common commands:
 
 ```text
-> look                 see where you are
-> take hand terminal   your motion scanner — grab it first
-> read company memo    there's reading material aboard; it pays to look
-> south                move between rooms (or n/s/e/w, in/out, up/down)
-> scan                 once things stir, this shows direction + distance
+look
+go north
+go south
+go east
+go west
+scan
+listen
+hide
+crawl east
+run north
+take hand terminal
+read terminal
+search body
+open door
+use keycard
+use access tuner on door
+repair generator
+craft radio
+send warning
+inventory
+map
+save
+load
+help
 ```
 
-Your goal is to reach **Communications**, fit the three repair parts, and
-**send the warning**. The parts are aboard the ship; you'll have to explore to
-find them. Before you ever step outside, find the **EVA suit** in the Airlock
-and `wear` it — the atmosphere is not survivable otherwise.
+Short directions work too:
 
-When the ship stops being safe, you have options: move quietly (`crawl`),
-`hide`, `throw` something to pull attention away, and watch the `scan` and the
-status line. Loud actions — running, the final repair — carry.
-
-Type `help` for the full command list, and `map` to see where you've been.
-
-### Commands at a glance
-
-| Do | Type |
-|----|------|
-| Move | `north` `south` `east` `west` `in` `out` `up` `down` (or `n` `s` `e` `w`…) |
-| Look around | `look` · `examine <thing>` (`x`) · `read <thing>` · `listen` |
-| Carry | `take <thing>` (`get`) · `drop <thing>` · `inventory` (`i`) · `use <thing>` |
-| Suit | `wear suit` · `remove suit` |
-| Survive | `scan` · `hide [spot]` · `crawl <dir>` · `run <dir>` · `throw <thing> <dir>` |
-| Win | `install <part>` · `repair transmitter` · `send <message>` |
-| Meta | `map` · `save` · `load` · `help` · `restart` · `quit` |
-
-### Survival tips (no spoilers)
-
-- The suit comes off the clock the moment you're sealed — but the air bites the
-  instant you remove it outside.
-- Quiet is life. Walking is quiet; **running and loud actions are not**.
-- A hiding place is a reprieve, not a fortress. Don't linger, and don't trust
-  the same spot twice.
-- The scanner can lag or scramble in some rooms. Trust it — but not blindly.
-
-### Options
-
-```sh
-./play --help        # usage and flags
-./play --fast        # skip the typewriter pacing on dramatic beats
-./play --no-color    # plain text (color is on by default in a terminal)
+```text
+n
+s
+e
+w
 ```
 
-You can `save` and `load` a single game in progress from inside the game.
+The hand terminal can report directions like:
+
+```text
+N
+NE
+E
+SE
+S
+SW
+W
+NW
+```
+
+Example scan:
+
+```text
+HAND TERMINAL:
+Unknown biological mass detected.
+
+Direction: SOUTHWEST
+Distance: 84 meters
+Motion: slow
+Confidence: 76%
+```
+
+Trust it.
+
+Not blindly.
 
 ---
 
-## For the curious
+## The ship
 
-The full design notes and roadmap live in
-[`kepler_isolation/ROADMAP.md`](kepler_isolation/ROADMAP.md), and contributor notes in
-[`kepler_isolation/CONTRIBUTING.md`](kepler_isolation/CONTRIBUTING.md). To run the test
-suite:
+The game takes place on one deck of the **USCSS Nightglass**.
 
-```sh
-python3 -m pytest kepler_isolation/tests/
+Major areas include:
+
+- Cryo Safe Haven
+- Medical
+- Science
+- Habitation
+- Commons
+- Security
+- Command
+- Industrial Operations
+- Engineering
+- Cargo
+- Docking
+- Maintenance and vent routes
+
+The cryo area is your only true safe haven. The alien cannot enter it.
+
+That does not mean it cannot wait outside.
+
+---
+
+## Character paths
+
+At the start, choose one of three paths:
+
+### Crew
+
+You know the ship, or at least you think you do. The dead are not strangers.
+
+### Synthetic
+
+You wake with gaps in memory and systems you do not fully control. The other synthetics may know what you are before you do.
+
+### Contractor
+
+You were not crew. You were hired for a job, stored in cryo, and forgotten until forgetting you became useful.
+
+Each path changes context, access, dialogue, and what the truth costs.
+
+---
+
+## Main objective
+
+To win, you must:
+
+1. wake in cryo,
+2. find and use the hand terminal,
+3. restore emergency power,
+4. collect radio components,
+5. build an improvised FTL emergency radio,
+6. override containment restrictions,
+7. reach long-range antenna control,
+8. send the warning.
+
+Survival is optional.
+
+The warning is not.
+
+---
+
+## Survival tips
+
+- Walking is safer than running.
+- Hiding works, but not forever.
+- Vents are shortcuts and traps.
+- The scanner gives information, not safety.
+- Synthetics are not automatically allies.
+- The safe haven is for planning, not winning.
+- Noise changes the ship.
+- If you die, learn the route.
+
+---
+
+## Project tone
+
+The game should feel like this:
+
+```text
+The ship is small enough to learn.
+The walls are still full of teeth.
 ```
 
-Built as a focused, terse, lethal little knife of a game. Good luck. Stay quiet.
+Good luck.
+
+Stay quiet.
