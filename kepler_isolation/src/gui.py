@@ -341,7 +341,18 @@ class KeplerGUI(QMainWindow):
         sidebar_lay.setContentsMargins(8, 8, 8, 8)
         sidebar_lay.setSpacing(7)
 
-        # Room image — optional 400×400; hidden when no image file found
+        # Tracker / exits / here / carrying panels (top of sidebar)
+        self._p_tracker = _Panel("motion tracker")
+        self._p_exits = _Panel("exits")
+        self._p_here = _Panel("here")
+        self._p_carry = _Panel("carrying")
+        for panel in (self._p_tracker, self._p_exits, self._p_here, self._p_carry):
+            panel.set_text("—")
+            sidebar_lay.addWidget(panel)
+
+        sidebar_lay.addStretch()
+
+        # Room image — optional 400×400; pinned to the bottom of the sidebar
         self._img_frame = QFrame()
         self._img_frame.setFixedHeight(400)
         self._img_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -355,16 +366,6 @@ class KeplerGUI(QMainWindow):
         img_lay.addWidget(self._img_label)
         sidebar_lay.addWidget(self._img_frame)
 
-        # Tracker / exits / here / carrying panels
-        self._p_tracker = _Panel("motion tracker")
-        self._p_exits = _Panel("exits")
-        self._p_here = _Panel("here")
-        self._p_carry = _Panel("carrying")
-        for panel in (self._p_tracker, self._p_exits, self._p_here, self._p_carry):
-            panel.set_text("—")
-            sidebar_lay.addWidget(panel)
-
-        sidebar_lay.addStretch()
         sidebar_scroll.setWidget(sidebar_inner)
 
         # Sidebar minimum width fits the image at 400 + margins
