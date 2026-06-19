@@ -34,6 +34,7 @@ from PySide6.QtGui import (
     QKeyEvent,
     QPalette,
     QPixmap,
+    QTextCharFormat,
     QTextCursor,
 )
 from PySide6.QtWidgets import (
@@ -258,9 +259,6 @@ class KeplerGUI(QMainWindow):
         self._log.setFont(self._font)
         self._log.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         self._log.setStyleSheet(f"QTextEdit {{ background:{_BG}; color:{_TEXT}; border:none; padding:10px 14px; }}")
-        self._log.document().setDefaultStyleSheet(
-            f"body, p, span {{ font-family: monospace; font-size: 11pt; color: {_TEXT}; }}"
-        )
         splitter.addWidget(self._log)
 
         # Sidebar (scrollable)
@@ -363,18 +361,24 @@ class KeplerGUI(QMainWindow):
         color: str | None = None,
         bold: bool = False,
     ) -> None:
-        escaped = self._esc(text)
-        style = ""
+        # Use insertText + QTextCharFormat instead of append() / insertHtml().
+        # append() passes content through Qt's HTML serializer which encodes
+        # apostrophes as &#x27; and other characters as entities, then fails to
+        # decode them back when rendering.  insertText() bypasses all of that —
+        # text is inserted literally, special characters always display correctly.
+        cursor = self._log.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        # Insert a block separator for every line except the first on a fresh doc.
+        if cursor.position() > 0:
+            cursor.insertBlock()
+        fmt = QTextCharFormat()
         if color:
-            style += f"color:{color};"
+            fmt.setForeground(QColor(color))
         if bold:
-            style += "font-weight:bold;"
-        if style:
-            fragment = f'<span style="{style}">{escaped}</span>'
-        else:
-            fragment = escaped
-        self._log.append(fragment)
-        self._log.moveCursor(QTextCursor.MoveOperation.End)
+            fmt.setFontWeight(700)
+        cursor.insertText(text, fmt)
+        self._log.setTextCursor(cursor)
+        self._log.ensureCursorVisible()
 
     def _w_rule(self) -> None:
         self._w("─" * 58, color=_BORDER)
