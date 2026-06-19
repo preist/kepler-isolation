@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import (
+    QAction,
     QColor,
     QFont,
     QFontDatabase,
@@ -39,11 +40,13 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
+    QPushButton,
     QScrollArea,
     QSizePolicy,
     QSplitter,
@@ -69,6 +72,7 @@ from engine import (
     motion_label,
 )
 from player import Player
+from version import AUTHOR, BUILD, VERSION
 
 # ---------------------------------------------------------------------------
 # Colour palette — hardcoded dark theme, consistent on all platforms
@@ -226,10 +230,69 @@ class KeplerGUI(QMainWindow):
     # ------------------------------------------------------------------ #
     # UI construction
     # ------------------------------------------------------------------ #
+    def _build_menu(self) -> None:
+        mb = self.menuBar()
+        mb.setStyleSheet(
+            f"QMenuBar {{ background:{_PANEL}; color:{_TEXT}; border-bottom:1px solid {_BORDER}; }}"
+            f"QMenuBar::item:selected {{ background:{_BORDER}; }}"
+            f"QMenu {{ background:{_PANEL}; color:{_TEXT}; border:1px solid {_BORDER}; }}"
+            f"QMenu::item:selected {{ background:{_BORDER}; }}"
+        )
+
+        file_menu = mb.addMenu("File")
+        quit_action = QAction("Exit", self)
+        quit_action.setMenuRole(QAction.MenuRole.QuitRole)
+        quit_action.triggered.connect(QApplication.quit)
+        file_menu.addAction(quit_action)
+
+        help_menu = mb.addMenu("Help")
+        about_action = QAction("About", self)
+        about_action.setMenuRole(QAction.MenuRole.AboutRole)
+        about_action.triggered.connect(self._show_about)
+        help_menu.addAction(about_action)
+
+    def _show_about(self) -> None:
+        dlg = QDialog(self)
+        dlg.setWindowTitle("About KEPLER ISOLATION")
+        dlg.setModal(True)
+        dlg.setFixedSize(380, 220)
+        dlg.setStyleSheet(
+            f"QDialog {{ background:{_PANEL}; }}"
+            f"QLabel {{ color:{_TEXT}; border:none; }}"
+            f"QPushButton {{ background:{_BORDER}; color:{_TEXT}; border:1px solid {_BORDER};"
+            f" padding:4px 18px; }}"
+            f"QPushButton:hover {{ background:#383828; }}"
+        )
+
+        lay = QVBoxLayout(dlg)
+        lay.setContentsMargins(28, 24, 28, 20)
+        lay.setSpacing(6)
+
+        title = QLabel("KEPLER ISOLATION")
+        title_font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+        title_font.setPointSize(15)
+        title_font.setBold(True)
+        title.setFont(title_font)
+        title.setStyleSheet(f"color:{_CYAN}; border:none;")
+        lay.addWidget(title)
+
+        lay.addSpacing(4)
+        lay.addWidget(QLabel(f"Version {VERSION}   Build {BUILD}"))
+        lay.addWidget(QLabel(f"Author:  {AUTHOR}"))
+        lay.addStretch()
+
+        ok = QPushButton("OK")
+        ok.setDefault(True)
+        ok.clicked.connect(dlg.accept)
+        lay.addWidget(ok, alignment=Qt.AlignmentFlag.AlignRight)
+
+        dlg.exec()
+
     def _build_ui(self) -> None:
         self.setWindowTitle("KEPLER ISOLATION")
         self.resize(1120, 740)
         self.setMinimumSize(820, 560)
+        self._build_menu()
 
         root = QWidget()
         root.setStyleSheet(f"background:{_BG};")

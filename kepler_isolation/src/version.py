@@ -1,0 +1,3 @@
+VERSION = "1.0"
+BUILD = "20260619"
+AUTHOR = "Igor Putina"
