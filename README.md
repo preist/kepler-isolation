@@ -1,4 +1,4 @@
-# Nightglass Isolation
+# Kepler Isolation
 
 *A short, lethal terminal horror game. Zork's parser by way of industrial space dread.*
 
@@ -22,7 +22,7 @@ Now the only thing left to do is make sure it does not reach Earth.
 
 ## What kind of game is this?
 
-**Nightglass Isolation** is a text-only interactive-fiction survival horror game.
+**Kepler Isolation** is a text-only interactive-fiction survival horror game.
 
 Think:
 
